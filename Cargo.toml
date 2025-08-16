@@ -1,0 +1,24 @@
+[package]
+name = "msl-cli"
+version = "0.3.0-alpha"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Yuyi-Oak <awanye@qq.com>"]
+description = "MSL-Cli: A blazing-fast, cross-platform command-line tool inspired by MSL."
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/MSLTeam/MSL-Cli"
+keywords = ["cli", "rust", "tools", "cross-platform", "msl"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+chrono = "0.4.41"
+whoami = "1.6.1"
+reqwest = { version = "0.12.23", features = ["blocking", "json"] }
+serde = { version = "1.0.219", features = ["derive"] }
+keyring ="3.6.3"
+
+[[bin]]
+name = "msl-cli"
+path = "src/main.rs"
