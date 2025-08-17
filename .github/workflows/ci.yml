@@ -51,7 +51,7 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Build release binary
-        run: cross build --release --target ${{ matrix.target }} --features vendored
+        run: cross build --release --target ${{ matrix.target }}
 
       - name: Prepare artifacts dir
         shell: bash
