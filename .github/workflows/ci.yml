@@ -3,10 +3,10 @@ name: Rust Release
 on:
   push:
     tags:
-      - "v*"        # 正式版，如 v1.2.3
-      - "v*-beta*"  # 预发布 Beta，如 v1.2.3-beta.1
-      - "v*-rc*"    # Release Candidate，如 v1.2.3-rc.1
-      - "nightly*"  # Nightly，如 nightly-2025-08-17
+      - "v*"        
+      - "v0-beta3.7"  
+      - "v*-rc*"   
+      - "nightly*"  
   workflow_dispatch:
 
 env:
@@ -17,20 +17,17 @@ jobs:
     name: Build (${{ matrix.os }}-${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false   # ✅ 禁止 fail-fast，防止一个失败取消所有
+      fail-fast: false
       matrix:
         include:
-          # Linux
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-          # macOS
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
-          # Windows
           - os: windows-latest
             target: x86_64-pc-windows-msvc
 
@@ -63,6 +60,17 @@ jobs:
       - name: Install cross compiler
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      # ✅ 新增：为 aarch64-unknown-linux-gnu 配置 openssl 环境
+      - name: Install OpenSSL for aarch64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev:arm64 pkg-config
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          echo "OPENSSL_DIR=/usr/lib/aarch64-linux-gnu" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/usr/include" >> $GITHUB_ENV
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
