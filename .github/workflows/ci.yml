@@ -111,11 +111,7 @@ jobs:
 
           # SHA256 校验
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-              certutil -hashfile "$BIN" SHA256 > hash.txt
-              # 仅提取哈希值部分
-              HASH=$(findstr /v ":" hash.txt | findstr /v "hash")
-              echo "$HASH" > "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
-              rm hash.txt
+              powershell -Command "Get-FileHash -Algorithm SHA256 '$BIN' | Select-Object -ExpandProperty Hash | Out-File -Encoding ascii 'artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256'"
           else
               shasum -a 256 "$BIN" > "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
           fi
