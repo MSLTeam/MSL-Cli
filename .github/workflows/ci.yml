@@ -61,17 +61,22 @@ jobs:
 
       # 安装交叉编译工具链（Linux aarch64）
       - name: Install cross compiler
-       if: matrix.target == 'aarch64-unknown-linux-gnu'
-       run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artifacts dir
+        shell: bash
+        run: |
+          rm -rf artifacts
+          mkdir -p artifacts
 
       - name: Package artifact
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p artifacts
 
           if [[ "$RUNNER_OS" == "Windows" ]]; then
               BIN=$(find target/${{ matrix.target }}/release -type f -name "*.exe" -print -quit)
@@ -94,7 +99,7 @@ jobs:
           fi
 
       - name: Sign artifact (GPG)
-        if: env.GPG_PRIVATE_KEY != ''
+        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         shell: bash
         run: |
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import
