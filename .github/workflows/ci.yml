@@ -43,11 +43,6 @@ jobs:
       - name: Install cross
         run: cargo install cross
 
-      # 安装 openssl-dev 和 pkg-config（仅 Linux）
-      - name: Install OpenSSL dev & pkg-config
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
-
       - name: Get crate version
         shell: bash
         run: |
@@ -55,7 +50,6 @@ jobs:
           echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      # 构建时带 vendored feature，自动编译 openssl
       - name: Build release binary
         run: cross build --release --target ${{ matrix.target }} --features vendored
 
