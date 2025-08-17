@@ -78,7 +78,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1.7.0
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
@@ -110,7 +110,9 @@ jobs:
           chmod +x "$DST" || true
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
+        with: 
+          name: msl-cli-${{ env.VERSION }}-${{ matrix.system }}-${{ matrix.arch }}
 
   release:
     needs: build
