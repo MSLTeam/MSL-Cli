@@ -99,7 +99,7 @@ jobs:
           fi
 
       - name: Sign artifact (GPG)
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        if: ${{ secrets.GPG_PRIVATE_KEY }}
         shell: bash
         run: |
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import
