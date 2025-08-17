@@ -1,6 +1,7 @@
+// TODO: 更换交互方式
 // 引用的模块部分
 use chrono::Local;
-use clap::{Arg, ArgAction, Command, Parser, Subcommand};
+use clap::{Arg, ArgAction, Command, Parser, Subcommand, ArgMatches};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use std::{
@@ -12,6 +13,7 @@ use std::{
 };
 use whoami;
 use keyring::Entry;
+use rpassword::read_password;
 
 // 常量定义数据结构和请求函数
 const CODE_PERMISSION: i32 = 2;
@@ -87,9 +89,9 @@ fn login_user(
     }
 }
 
-// help与version命令
-fn main() {
-    let matches = Command::new("msl-cli")
+// 构建 CLI 命令行界面
+fn build_cli() -> Command {
+    Command::new("msl-cli")
         .version(env!("CARGO_PKG_VERSION"))
         .author("Yuyi-Oak <awanye@qq.com>")
         .about("A blazing-fast, cross-platform CLI tool — 快速、跨平台的命令行工具")
@@ -130,44 +132,54 @@ fn main() {
                         .action(ArgAction::SetTrue),
                 ),
         )
+        .subcommand(Command::new("new").about("新建服务器 (占位符)"))
+        .subcommand(Command::new("list").about("列出服务器 (占位符)"))
+        .subcommand(Command::new("frp").about("映射服务器 (占位符)"))
         .subcommand(
             Command::new("login")
-                .about("登录 MSL 用户中心")
+                .about("登录MSL用户中心")
+                //可选：邮箱
                 .arg(
                     Arg::new("email")
-                        .long("email")
                         .short('e')
-                        .value_name("email")
-                        .help("MSL 用户中心账号邮箱")
-                        .required(true),
+                        .long("email")
+                        .value_name("EMAIL")
+                        .help("MSL 用户中心账户邮箱")
+                        .num_args(1),
                 )
+                //可选：密码
                 .arg(
                     Arg::new("password")
-                        .long("password")
                         .short('p')
-                        .value_name("password")
-                        .help("MSL 用户中心账号密码")
-                        .required(true),
+                        .long("password")
+                        .value_name("PASSWORD")
+                        .help("MSL 用户中心账户密码")
+                        .num_args(1),
                 )
+                //可选：2FA 密钥
                 .arg(
                     Arg::new("twofa")
                         .short('t')
-                        .long("two-factor")
-                        .value_name("twoFactorAuthKey")
-                        .help("MSL 用户中心 2FA 密钥 (可选)")
+                        .long("twofa")
+                        .value_name("CODE")
+                        .help("2FA 验证码（可选）")
+                        .num_args(1),
                 )
+                //可选：token存储
                 .arg(
                     Arg::new("save_login")
                         .short('s')
                         .long("save-login")
-                        .help("保存用户 token")
+                        .help("保存账户 token 到系统钥匙串")
                         .action(ArgAction::SetTrue)
                 )
         )
-        .subcommand(Command::new("new").about("新建服务器 (占位符)"))
-        .subcommand(Command::new("list").about("列出服务器 (占位符)"))
-        .subcommand(Command::new("frp").about("映射服务器 (占位符)"))
-        .get_matches();
+}
+
+// commands
+fn main() {
+    let cli = build_cli();
+    let matches = cli.get_matches();
 
     match matches.subcommand() {
         Some(("init", sub)) => {
@@ -196,63 +208,10 @@ fn main() {
         Some(("list", _)) => {
             cmd_list();
         }
-        Some(("login", sub)) => {
-                // 确认 EULA
-                let eula = env::current_dir().unwrap()
-                    .join("MSL").join("eula.txt");
-                let agreed = fs::read_to_string(&eula)
-                .map(|c| c.contains("eula=true"))
-                .unwrap_or(false);
-            if !agreed {
-                println!("未同意用户协议 (EULA)，是否运行 `msl-cli init` 以完成初始化? (y/n)");
-                let mut ans = String::new();
-                io::stdin().read_line(&mut ans).unwrap();
-                if ans.trim().eq_ignore_ascii_case("y") {
-                    cmd_init(false).unwrap_or_else(|e| {
-                    eprintln!("初始化失败: {}", e);
-                        exit(CODE_IO);
-                    });
-                } else {
-                    println!("请先同意用户协议后再尝试登录。");
-                    exit(0);
-                }
-            }
-
-            // 读参
-            let email      = sub.get_one::<String>("email").unwrap();
-            let password   = sub.get_one::<String>("password").unwrap();
-            let twofa = sub.get_one::<String>("twofa").map(String::as_str);
-            let save_login   = sub.get_flag("save_login");
-
-            // 调用
-            match login_user(email, password, twofa) {
-                Ok(data) => {
-                    println!("登录成功，欢迎：{}，Token：{}", data.username, data.token);
-
-                    if save_login {
-                        match Entry::new("msl-cli", email) {
-                            Ok(entry) => {
-                                if let Err(e) = entry.set_password(&data.token) {
-                                    eprintln!("保存 Token 失败: {}", e);
-                                } else {
-                                    println!("Token 已安全保存到系统钥匙串。");
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("创建 Keyring 实例失败: {}", e);
-                            }
-                        }
-                    }
-                }
-                Err(err) => {
-                    eprintln!("{}", err);
-                    exit(1);
-                }
-            }
-        },
-        _ => {
-            // 无子命令时由 clap 自动处理 --version/-v/-V 和 --help/-h
+        Some(("login", sub_m)) => {
+            handle_login(sub_m);
         }
+        _ => println!("请查看帮助: msl-cli --help"),
     }
 }
 
@@ -368,6 +327,105 @@ fn write_log(action: &str, result: &str) -> io::Result<()> {
     let user = whoami::username();
     writeln!(f, "[{}] [{}] [{}] {}", ts, user, action, result)?;
     Ok(())
+}
+
+// 交互式登录
+fn handle_login(sub_m: &ArgMatches) {
+    // 检查EULA
+    let eula_path = env::current_dir().unwrap().join("MSL").join("eula.txt");
+    let agreed = fs::read_to_string(&eula_path)
+        .map(|s| s.contains("eula=true"))
+        .unwrap_or(false);
+    if !agreed {
+        eprintln!("未同意 EULA，请先运行 `msl-cli init` 完成初始化。");
+        exit(0);
+    }
+
+    // 尝试从参读取
+    let email_arg = sub_m.get_one::<String>("email").map(String::as_str);
+    let password_arg = sub_m.get_one::<String>("password").map(String::as_str);
+    let twofa_arg = sub_m.get_one::<String>("twofa").map(String::as_str);
+    let save_login = sub_m.get_flag("save_login");
+
+    // 用于最终登录调用的变量
+    let (email, password, twofa): (String, String, Option<String>);
+
+    if let (Some(e), Some(p)) = (email_arg, password_arg) {
+        // --参数式登录分支-- //
+        email = e.to_string();
+        password = p.to_string();
+        twofa = twofa_arg.map(|s| s.to_string());
+    } else {
+        // --交互式登录分支-- //
+        // 邮箱
+        println!("请输入邮箱：");
+        io::stdout().flush().unwrap();
+        let mut line = String::new();
+        io::stdin().read_line(&mut line).unwrap();
+        email = line.trim().to_string();
+
+        // 密码
+        password = read_password().expect("读取密码失败");
+
+        // 2FA
+        twofa = loop {
+            print!("您的帐号是否启用 2FA？(y/n): ");
+            io::stdout().flush().unwrap();
+            let mut ans = String::new();
+            io::stdin().read_line(&mut ans).unwrap();
+            match ans.trim().to_lowercase().as_str() {
+                "y" | "yes" => {
+                    print!("请输入 2FA 密钥：");
+                    io::stdout().flush().unwrap();
+                    let mut code = String::new();
+                    io::stdin().read_line(&mut code).unwrap();
+                    break Some(code.trim().to_string());
+                }
+                "n" | "no" => break None,
+                _ => println!("请输入 y 或 n"),
+            }
+        };
+    }
+
+    // 调用登录接口
+    let data = login_user(&email, &password, twofa.as_deref())
+        .unwrap_or_else(|e| {
+            eprintln!("登录失败: {}", e);
+            exit(1);
+        });
+    println!("登录成功, 欢迎 {}! ", data.username);
+
+    // 参数式且带 --save-login 则跳过；不带或交互式则询问
+    let mut do_save = save_login;
+    if email_arg.is_none() {
+        // 交互式询问
+        do_save = loop {
+            println!("是否保存 token 到系统钥匙串? (y/n): ");
+            io::stdout().flush().unwrap();
+            let mut ans = String::new();
+            io::stdin().read_line(&mut ans).unwrap();
+            match ans.trim().to_lowercase().as_str() {
+                "y" | "yes" => break true,
+                "n" | "no" => break false,
+                _ => println!("请输入 y 或 n"),
+            }
+        };
+    }
+
+    if do_save {
+        match Entry::new("msl-cli", &email) {
+            Ok(entry) => {
+                if let Err(e) = entry.set_password(&data.token) {
+                    eprintln!("保存 token 失败: {}", e);
+                } else {
+                    println!("token 已经安全保存到系统钥匙串");
+                }
+            }
+            Err(e) => {
+                eprintln!("创建 Keyring 实例失败: {}", e);
+            }
+        }
+    }
 }
 
 /// new 子命令占位
