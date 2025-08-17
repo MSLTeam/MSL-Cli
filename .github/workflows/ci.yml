@@ -1,4 +1,4 @@
-name: Build & Release
+name: Build Release
 
 on:
   push:
@@ -34,9 +34,6 @@ jobs:
             target: aarch64-unknown-linux-musl
           - os: ubuntu-latest
             target: armv7-unknown-linux-musleabihf
-          # Linux RISC-V
-          - os: ubuntu-latest
-            target: riscv64gc-unknown-linux-gnu
           # Windows MSVC/GNU/x86_64/aarch64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -81,6 +78,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cross
+        if: runner.os != 'Windows'
         run: cargo install cross
 
       - name: Get crate version
@@ -91,7 +89,13 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Build release binary
-        run: cross build --release --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cargo build --release --target ${{ matrix.target }}
+          else
+            cross build --release --target ${{ matrix.target }}
+          fi
 
       - name: Prepare artifacts dir
         shell: bash
@@ -104,77 +108,28 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="${{ env.VERSION }}"
-          OS="${{ matrix.os }}"
-          TARGET="${{ matrix.target }}"
-
-          # 系统名
-          if [[ "$OS" == "ubuntu-latest" ]]; then
-            if [[ "$TARGET" == *"linux"* ]]; then
-              SYS="linux"
-            elif [[ "$TARGET" == *"freebsd"* ]]; then
-              SYS="freebsd"
-            elif [[ "$TARGET" == *"openbsd"* ]]; then
-              SYS="openbsd"
-            elif [[ "$TARGET" == *"android"* ]]; then
-              SYS="android"
-            elif [[ "$TARGET" == *"wasm"* ]]; then
-              SYS="wasm"
-            else
-              SYS="ubuntu"
-            fi
-          elif [[ "$OS" == "macos-latest" ]]; then
-            if [[ "$TARGET" == *"ios"* ]]; then
-              SYS="ios"
-            else
-              SYS="macos"
-            fi
-          elif [[ "$OS" == "windows-latest" ]]; then
-            SYS="windows"
+          echo "Checking for built binaries in target/${{ matrix.target }}/release"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+              BIN=$(find "target/${{ matrix.target }}/release" -type f -name "*.exe" -print -quit)
           else
-            SYS="$OS"
-          fi
-
-          # 架构名
-          if [[ "$TARGET" == "x86_64"* ]]; then
-            ARCH="x86_64"
-          elif [[ "$TARGET" == "aarch64"* ]]; then
-            ARCH="aarch64"
-          elif [[ "$TARGET" == "armv7"* ]]; then
-            ARCH="armv7"
-          elif [[ "$TARGET" == "riscv64"* ]]; then
-            ARCH="riscv64"
-          elif [[ "$TARGET" == "wasm32"* ]]; then
-            ARCH="wasm32"
-          else
-            ARCH="$TARGET"
-          fi
-
-          # 找到可执行文件
-          if [[ "$SYS" == "windows" ]]; then
-            BIN=$(find "target/${TARGET}/release" -type f -name "*.exe" -print -quit)
-            OUT="msl-cli-${VERSION}-${SYS}-${ARCH}.exe"
-          else
-            BIN=$(find "target/${TARGET}/release" -type f -perm -u+x -print -quit)
-            OUT="msl-cli-${VERSION}-${SYS}-${ARCH}"
+              BIN=$(find "target/${{ matrix.target }}/release" -type f -perm -u+x -print -quit)
           fi
 
           echo "BIN=$BIN"
-          echo "OUT=$OUT"
 
           if [[ -z "$BIN" ]]; then
-            echo "Error: No binary found for $TARGET" >&2
-            ls "target/${TARGET}/release"
-            exit 1
+              echo "Error: No binary found for ${{ matrix.target }}" >&2
+              ls "target/${{ matrix.target }}/release"
+              exit 1
           fi
 
-          cp "$BIN" "artifacts/$OUT"
+          cp "$BIN" artifacts/
 
           # SHA256 校验
-          if [[ "$SYS" == "windows" ]]; then
-            powershell -Command "Get-FileHash -Algorithm SHA256 '$BIN' | Select-Object -ExpandProperty Hash | Out-File -Encoding ascii 'artifacts/${OUT}.sha256'"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+              powershell -Command "Get-FileHash -Algorithm SHA256 '$BIN' | Select-Object -ExpandProperty Hash | Out-File -Encoding ascii 'artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256'"
           else
-            shasum -a 256 "$BIN" > "artifacts/${OUT}.sha256"
+              shasum -a 256 "$BIN" > "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
           fi
 
       - name: Upload artifact
