@@ -66,28 +66,55 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Checking for built binaries in target/${{ matrix.target }}/release"
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-              BIN=$(find "target/${{ matrix.target }}/release" -type f -name "*.exe" -print -quit)
+          VERSION="${{ env.VERSION }}"
+          OS="${{ matrix.os }}"
+          TARGET="${{ matrix.target }}"
+
+          # 解析系统和架构
+          if [[ "$OS" == "ubuntu-latest" ]]; then
+            SYS="linux"
+          elif [[ "$OS" == "macos-latest" ]]; then
+            SYS="macos"
+          elif [[ "$OS" == "windows-latest" ]]; then
+            SYS="windows"
           else
-              BIN=$(find "target/${{ matrix.target }}/release" -type f -perm -u+x -print -quit)
+            SYS="$OS"
+          fi
+
+          # 解析架构
+          if [[ "$TARGET" == "x86_64-"* ]]; then
+            ARCH="x86_64"
+          elif [[ "$TARGET" == "aarch64-"* ]]; then
+            ARCH="aarch64"
+          else
+            ARCH="$TARGET"
+          fi
+
+          # 查找可执行文件
+          if [[ "$SYS" == "windows" ]]; then
+            BIN=$(find "target/${TARGET}/release" -type f -name "*.exe" -print -quit)
+            OUT="msl-cli-${VERSION}-${SYS}-${ARCH}.exe"
+          else
+            BIN=$(find "target/${TARGET}/release" -type f -perm -u+x -print -quit)
+            OUT="msl-cli-${VERSION}-${SYS}-${ARCH}"
           fi
 
           echo "BIN=$BIN"
+          echo "OUT=$OUT"
 
           if [[ -z "$BIN" ]]; then
-              echo "Error: No binary found for ${{ matrix.target }}" >&2
-              ls "target/${{ matrix.target }}/release"
-              exit 1
+            echo "Error: No binary found for $TARGET" >&2
+            ls "target/${TARGET}/release"
+            exit 1
           fi
 
-          cp "$BIN" artifacts/
+          cp "$BIN" "artifacts/$OUT"
 
           # SHA256 校验
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-              powershell -Command "Get-FileHash -Algorithm SHA256 '$BIN' | Select-Object -ExpandProperty Hash | Out-File -Encoding ascii 'artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256'"
+          if [[ "$SYS" == "windows" ]]; then
+            powershell -Command "Get-FileHash -Algorithm SHA256 '$BIN' | Select-Object -ExpandProperty Hash | Out-File -Encoding ascii 'artifacts/${OUT}.sha256'"
           else
-              shasum -a 256 "$BIN" > "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
+            shasum -a 256 "$BIN" > "artifacts/${OUT}.sha256"
           fi
 
       - name: Upload artifact
@@ -117,15 +144,25 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-      - name: Get version from build job
-        run: echo "VERSION=$(cat artifacts/${{ needs.build.outputs.version }})" >> $GITHUB_ENV
-
-      - name: Create tag
+      # 读取 Cargo.toml 的版本号
+      - name: Get crate version
+        id: get_version
+        shell: bash
         run: |
-          TAG="v${{ env.VERSION }}"
-          echo "TAG=$TAG"
-          git tag $TAG
-          git push origin $TAG
+          VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      # 自动创建 tag，并保证和 Cargo.toml 版本一致
+      - name: Create tag if not exists
+        run: |
+          TAG="v${{ steps.get_version.outputs.version }}"
+          git fetch --tags
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag "$TAG"
+            git push origin "$TAG"
+          else
+            echo "Tag $TAG already exists"
+          fi
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
