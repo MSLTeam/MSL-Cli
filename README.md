@@ -42,7 +42,7 @@ cargo build --release
 
 ```bash
 msl-cli --version
-msl-cli -v
+msl-cli --help
 ```
 
 更多功能即将开放，敬请期待！

@@ -42,7 +42,7 @@ cargo build --release
 
 ```bash
 msl-cli --version
-msl-cli -v
+msl-cli --help
 ```
 
 New subcommands are under active development — stay tuned!
