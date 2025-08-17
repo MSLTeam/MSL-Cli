@@ -33,7 +33,7 @@ jobs:
             target: aarch64-unknown-linux-musl
           - os: ubuntu-latest
             target: armv7-unknown-linux-musleabihf
-          # Android (重点支持)
+          # Android (use cross nightly docker image)
           - os: ubuntu-latest
             target: aarch64-linux-android
           - os: ubuntu-latest
@@ -76,17 +76,18 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install Android NDK (for android targets)
-        if: startsWith(matrix.target, 'aarch64-linux-android') || startsWith(matrix.target, 'armv7-linux-androideabi')
-        run: |
-          wget https://dl.google.com/android/repository/android-ndk-r21e-linux-x86_64.zip -O ndk.zip
-          unzip ndk.zip
-          echo "ANDROID_NDK_HOME=$PWD/android-ndk-r21e" >> $GITHUB_ENV
-          echo "$PWD/android-ndk-r21e/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
-
       - name: Install cross
         if: runner.os != 'Windows'
         run: cargo install cross
+
+      # Use cross nightly Docker image for Android targets to fix libunwind
+      - name: Set cross nightly Docker image for Android (aarch64)
+        if: startsWith(matrix.target, 'aarch64-linux-android')
+        run: echo "CROSS_DOCKER_IMAGE=ghcr.io/cross-rs/aarch64-linux-android:nightly" >> $GITHUB_ENV
+
+      - name: Set cross nightly Docker image for Android (armv7)
+        if: startsWith(matrix.target, 'armv7-linux-androideabi')
+        run: echo "CROSS_DOCKER_IMAGE=ghcr.io/cross-rs/armv7-linux-androideabi:nightly" >> $GITHUB_ENV
 
       - name: Get crate version
         shell: bash
