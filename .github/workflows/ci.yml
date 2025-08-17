@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    tags:
+      - 'v0.3.7'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          # —— Linux GNU —— #
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            system: linux-gnu
+            arch: x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            system: linux-gnu
+            arch: aarch64
+
+          # —— Linux MUSL —— #
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            system: linux-musl
+            arch: x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            system: linux-musl
+            arch: aarch64
+
+          # —— macOS —— #
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            system: macos
+            arch: x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            system: macos
+            arch: aarch64
+
+          # —— Windows —— #
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            system: windows
+            arch: x86_64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            system: windows
+            arch: aarch64
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build deps
+        uses: actions/cache@v3
+        with:
+          path: target/${{ matrix.target }}/release/deps
+          key: ${{ runner.os }}-cargo-deps-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install musl-tools (仅 musl 目标)
+        if: matrix.target contains 'musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1.7.0
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          profile: minimal
+          override: true
+
+      - name: Get crate version
+        id: ver
+        run: |
+          VERSION=$(cargo metadata --format-version=1 --no-deps \
+            | jq -r '.packages[0].version')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artifacts
+        run: mkdir -p artifacts
+
+      - name: Copy & rename binary
+        run: |
+          SRC=target/${{ matrix.target }}/release/msl-cli
+          DST=artifacts/msl-cli-${{ env.VERSION }}-${{ matrix.system }}-${{ matrix.arch }}
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            SRC+=.exe
+            DST+=.exe
+          fi
+          cp "$SRC" "$DST"
+          chmod +x "$DST" || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        id: gh_release
+        uses: softprops/action-gh-release@v1.6.0
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload binaries to Release
+        uses: softprops/action-gh-release@v1.6.0
+        with:
+          files: artifacts/**
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
