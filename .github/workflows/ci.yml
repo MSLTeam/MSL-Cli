@@ -98,17 +98,6 @@ jobs:
               shasum -a 256 "$BIN" > "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
           fi
 
-      - name: Sign artifact (GPG)
-        if: ${{ secrets.GPG_PRIVATE_KEY }}
-        shell: bash
-        run: |
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
-          for file in artifacts/*; do
-            gpg --batch --yes --armor --output "$file.sig" --detach-sig "$file"
-          done
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
