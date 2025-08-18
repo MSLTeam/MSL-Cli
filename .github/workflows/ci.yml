@@ -131,6 +131,15 @@ jobs:
           echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android21-clang" >> $GITHUB_ENV
           echo "CC_aarch64_linux_android=aarch64-linux-android21-clang" >> $GITHUB_ENV
           echo "AR_aarch64_linux_android=aarch64-linux-android-ar" >> $GITHUB_ENV
+          echo "RUSTFLAGS=-C link-args=-lunwind" >> $GITHUB_ENV
+
+      - name: Configure Android linker for ARMv7
+        if: matrix.target == 'armv7-linux-androideabi'
+        run: |
+          echo "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=armv7-linux-androideabi21-clang" >> $GITHUB_ENV
+          echo "CC_armv7_linux_androideabi=armv7-linux-androideabi21-clang" >> $GITHUB_ENV
+          echo "AR_armv7_linux_androideabi=armv7-linux-androideabi-ar" >> $GITHUB_ENV
+          echo "RUSTFLAGS=-C link-args=-lunwind" >> $GITHUB_ENV
 
       - name: Set cross nightly Docker image (armv7-android)
         if: startsWith(matrix.target, 'armv7-linux-androideabi')
@@ -143,35 +152,14 @@ jobs:
             | jq -r '.packages[0].version')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Conditionally create custom target file
-        run: |
-          if [[ "${{ matrix.target }}" == "aarch64-linux-android" ]]; then
-            echo '{
-              "llvm-target": "aarch64-linux-android",
-              "target-endian": "little",
-              "target-pointer-width": "64",
-              "target-c-int-width": "32",
-              "arch": "aarch64",
-              "os": "android",
-              "abi": "linux",
-              "features": "+neon",
-              "panic-strategy": "abort",
-              "linker-flavor": "gcc",
-              "linker": "aarch64-linux-android21-clang",
-              "relocation-model": "pic",
-              "disable-redzone": true,
-              "executables": true
-            }' > ./custom-android-target.json
-          fi
-
       - name: Build release binary
         shell: bash
         env:
           OPENSSL_NO_VENDOR: "1"
           OPENSSL_STATIC: "0"
         run: |
-          if [[ -f "./custom-android-target.json" ]]; then
-            cross build --release --target ./custom-android-target.json
+          if [[ "${{ matrix.target }}" == "aarch64-linux-android" || "${{ matrix.target }}" == "armv7-linux-androideabi" ]]; then
+            RUSTFLAGS="-C link-args=-lunwind" cross build --release --target ${{ matrix.target }}
           else
             cross build --release --target ${{ matrix.target }}
           fi
