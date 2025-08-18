@@ -21,66 +21,59 @@ jobs:
       matrix:
         include:
           # Linux
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-musleabihf
-          # Android (use cross nightly docker image)
-          - os: ubuntu-latest
-            target: aarch64-linux-android
-          - os: ubuntu-latest
-            target: armv7-linux-androideabi
+          - os: ubuntu-latest;           target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest;           target: aarch64-unknown-linux-gnu
+          - os: ubuntu-latest;           target: armv7-unknown-linux-gnueabihf
+          - os: ubuntu-latest;           target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest;           target: aarch64-unknown-linux-musl
+          - os: ubuntu-latest;           target: armv7-unknown-linux-musleabihf
+          # Android
+          - os: ubuntu-latest;           target: aarch64-linux-android
+          - os: ubuntu-latest;           target: armv7-linux-androideabi
           # Windows
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
+          - os: windows-latest;          target: x86_64-pc-windows-msvc
+          - os: windows-latest;          target: x86_64-pc-windows-gnu
+          - os: windows-latest;          target: aarch64-pc-windows-msvc
           # macOS
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
+          - os: macos-latest;            target: x86_64-apple-darwin
+          - os: macos-latest;            target: aarch64-apple-darwin
           # FreeBSD
-          - os: ubuntu-latest
-            target: x86_64-unknown-freebsd
-          - os: ubuntu-latest
-            target: aarch64-unknown-freebsd
+          - os: ubuntu-latest;           target: x86_64-unknown-freebsd
+          - os: ubuntu-latest;           target: aarch64-unknown-freebsd
           # OpenBSD
-          - os: ubuntu-latest
-            target: x86_64-unknown-openbsd
+          - os: ubuntu-latest;           target: x86_64-unknown-openbsd
           # iOS
-          - os: macos-latest
-            target: aarch64-apple-ios
+          - os: macos-latest;            target: aarch64-apple-ios
           # WASM
-          - os: ubuntu-latest
-            target: wasm32-unknown-unknown
-          - os: ubuntu-latest
-            target: wasm32-wasi
+          - os: ubuntu-latest;           target: wasm32-unknown-unknown
+          - os: ubuntu-latest;           target: wasm32-wasi
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install jq (for metadata parsing)
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y jq
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            brew install jq
+          elif [ "${{ runner.os }}" = "Windows" ]; then
+            choco install jq -y
+          fi
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
         with:
+          toolchain: stable
+          override: true
           targets: ${{ matrix.target }}
 
-      - name: Install cross
+      - name: Install cross (非 Windows)
         if: runner.os != 'Windows'
         run: cargo install cross
 
-      # Use cross nightly Docker image for Android targets to fix libunwind
+      # Android 特殊镜像
       - name: Set cross nightly Docker image for Android (aarch64)
         if: startsWith(matrix.target, 'aarch64-linux-android')
         run: echo "CROSS_DOCKER_IMAGE=ghcr.io/cross-rs/aarch64-linux-android:nightly" >> $GITHUB_ENV
@@ -92,8 +85,7 @@ jobs:
       - name: Get crate version
         shell: bash
         run: |
-          VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
-          echo "VERSION=$VERSION"
+          VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Build release binary
@@ -106,38 +98,25 @@ jobs:
           fi
 
       - name: Prepare artifacts dir
-        shell: bash
         run: |
-          rm -rf artifacts
-          mkdir -p artifacts
+          rm -rf artifacts && mkdir artifacts
 
       - name: Package artifact
         shell: bash
         run: |
           set -euo pipefail
-
-          echo "Checking for built binaries in target/${{ matrix.target }}/release"
+          echo "Looking in target/${{ matrix.target }}/release"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-              BIN=$(find "target/${{ matrix.target }}/release" -type f -name "*.exe" -print -quit)
+            BIN=$(find "target/${{ matrix.target }}/release" -type f -name "*.exe" -print -quit)
           else
-              BIN=$(find "target/${{ matrix.target }}/release" -type f -perm -u+x -print -quit)
+            BIN=$(find "target/${{ matrix.target }}/release" -type f -perm -u+x -print -quit)
           fi
-
-          echo "BIN=$BIN"
-
-          if [[ -z "$BIN" ]]; then
-              echo "Error: No binary found for ${{ matrix.target }}" >&2
-              ls "target/${{ matrix.target }}/release"
-              exit 1
-          fi
-
+          test -n "$BIN" || { echo "No binary for ${{ matrix.target }}" >&2; ls target/${{ matrix.target }}/release; exit 1; }
           cp "$BIN" artifacts/
-
-          # SHA256 校验
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-              powershell -Command "Get-FileHash -Algorithm SHA256 '$BIN' | Select-Object -ExpandProperty Hash | Out-File -Encoding ascii 'artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256'"
+            powershell -Command "Get-FileHash -Algorithm SHA256 '$BIN' | Select -Expand Hash | Out-File -Encoding ascii artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
           else
-              shasum -a 256 "$BIN" > "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
+            shasum -a 256 "$BIN" > "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
           fi
 
       - name: Upload artifact
@@ -159,8 +138,8 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: artifacts/**
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'rc') || contains(github.ref, 'nightly') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
