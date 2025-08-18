@@ -110,24 +110,13 @@ jobs:
         shell: powershell
         run: rustup target add aarch64-pc-windows-msvc
 
-      # MSYS2 + OpenSSL(for GNU) —— 只在 windows-gnu 时执行
-      - name: Setup MSYS2 and install OpenSSL for GNU
-        if: matrix.os == 'Windows' && matrix.target == 'x86_64-pc-windows-gnu'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >
-            mingw-w64-x86_64-openssl
-            mingw-w64-x86_64-pkg-config
-
       - name: Install Strawberry Perl & OpenSSL
         if: matrix.os == 'Windows'
         shell: powershell
         run: |
           choco install strawberryperl -y
           choco install openssl.light -y
-          $bin = 'C:\Program Files\OpenSSL\bin'
+          $OPENSSL_PATH = 'C:\Program Files\OpenSSL'
           if (Test-Path $bin) {
             Add-Content -Path $env:GITHUB_PATH -Value $bin
           }
@@ -136,10 +125,19 @@ jobs:
           cpan -i Params::Check
           cpan -i IPC::Cmd
           # Export OpenSSL env vars     
-          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_NO_VENDOR=1'
-          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_DIR=C:\Program Files\OpenSSL'
-          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_LIB_DIR=C:\Program Files\OpenSSL\lib'
-          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL\include'
+          Add-Content -Path $env:GITHUB_PATH -Value "$OPENSSL_PATH\bin"
+          echo "OPENSSL_DIR=$OPENSSL_PATH" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$OPENSSL_PATH\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$OPENSSL_PATH\include" >> $env:GITHUB_ENV  
+
+      - name: Setup MSYS2 for OpenSSL
+        if: matrix.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-openssl mingw-w64-x86_64-pkg-config
+
 
       - name: Enable vendored OpenSSL for Windows
         if: runner.os == 'Windows'
