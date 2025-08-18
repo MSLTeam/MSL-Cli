@@ -10,44 +10,63 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-windows:
     name: Build for ${{ matrix.target }}
     runs-on: windows-latest
+
     strategy:
       matrix:
         include:
           # MSVC targets
           - target: i686-pc-windows-msvc
+            msystem: ''
           - target: x86_64-pc-windows-msvc
+            msystem: ''
           - target: aarch64-pc-windows-msvc
+            msystem: ''
           # GNU targets
           - target: i686-pc-windows-gnu
             msystem: MINGW32
           - target: x86_64-pc-windows-gnu
-            msystem: MINGW64
-          - target: aarch64-pc-windows-gnu
             msystem: MINGW64
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install MSYS2 (for GNU targets)
-        if: contains(matrix.target, 'windows-gnu')
+      # 1) 仅 GNU 分支需要 MSYS2 + OpenSSL
+      - name: Set PREFIX for GNU target
+        if: ${{ contains(matrix.target, 'windows-gnu') }}
+        shell: bash
+        run: |
+          if [[ "${{ matrix.msystem }}" == "MINGW32" ]]; then
+            echo "PREFIX=i686" >> $GITHUB_ENV
+          else
+            echo "PREFIX=x86_64" >> $GITHUB_ENV
+          fi
+
+      - name: Install MSYS2 & OpenSSL (GNU targets)
+        if: ${{ contains(matrix.target, 'windows-gnu') }}
         uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.msystem }}
           update: true
-          install: gcc make pkg-config libssl-devel
+          install: |
+            mingw-w64-${{ env.PREFIX }}-gcc
+            mingw-w64-${{ env.PREFIX }}-pkg-config
+            mingw-w64-${{ env.PREFIX }}-openssl
 
-      - name: Setup Rust toolchain
+      # 2) 统一安装 Rust toolchain
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
+      # 3) 构建
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
+      # 4) 上传到同一个 Draft Release
       - name: Attach to Draft Release
         uses: softprops/action-gh-release@v2
         with:
