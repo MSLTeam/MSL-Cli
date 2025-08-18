@@ -121,8 +121,8 @@ jobs:
             mingw-w64-x86_64-openssl
             mingw-w64-x86_64-pkg-config
 
-      - name: Install Strawberry Perl & OpenSSL for Windows MSVC
-        if: matrix.os == 'Windows' && matrix.target == 'x86_64-pc-windows-msvc'
+      - name: Install Strawberry Perl & OpenSSL
+        if: matrix.os == 'Windows'
         shell: powershell
         run: |
           choco install strawberryperl -y
@@ -133,11 +133,19 @@ jobs:
           }
           # Install missing Perl module for openssl-sys
           cpan -i Locale::Maketext::Simple
+          cpan -i Params::Check
+          cpan -i IPC::Cmd
           # Export OpenSSL env vars     
           Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_NO_VENDOR=1'
           Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_DIR=C:\Program Files\OpenSSL'
           Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_LIB_DIR=C:\Program Files\OpenSSL\lib'
           Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL\include'
+
+      - name: Enable vendored OpenSSL for Windows
+        if: runner.os == 'Windows'
+        run: |
+          echo "OPENSSL_NO_VENDOR=0" >> $GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
 
       - name: Install cross (Linux only)
         if: runner.os == 'Linux'
