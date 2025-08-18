@@ -105,17 +105,17 @@ jobs:
         run: |
           choco install strawberryperl -y
           choco install openssl.light -y
-          $bin = 'C:\Program Files\OpenSSL-Win64\bin'
+          $bin = 'C:\Program Files\OpenSSL\bin'
           if (Test-Path $bin) {
             Add-Content -Path $env:GITHUB_PATH -Value $bin
           }
           # Install missing Perl module for openssl-sys
-          cpan -q -i Locale::Maketext::Simple
-          # Export OpenSSL env vars
+          cpan -i Locale::Maketext::Simple
+          # Export OpenSSL env vars     
           Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_NO_VENDOR=1'
-          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_DIR=C:\Program Files\OpenSSL-Win64'
-          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_LIB_DIR=C:\Program Files\OpenSSL-Win64\lib'
-          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL-Win64\include'
+          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_DIR=C:\Program Files\OpenSSL'
+          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_LIB_DIR=C:\Program Files\OpenSSL\lib'
+          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL\include'
 
       - name: Install cross (non-Windows)
         if: runner.os != 'Windows'
