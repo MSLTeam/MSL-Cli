@@ -50,6 +50,12 @@ jobs:
             mingw-w64-${{ env.PREFIX }}-openssl
             mingw-w64-${{ env.PREFIX }}-pkg-config
 
+      - name: Install OpenSSL via vcpkg
+        run: |
+          vcpkg install openssl:x64-windows
+          echo "VCPKG_ROOT=C:\\vcpkg" >> $GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
+
       # Rust toolchain
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -64,6 +70,8 @@ jobs:
           OPENSSL_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64' || '' }}
           OPENSSL_LIB_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/lib' || '' }}
           OPENSSL_INCLUDE_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/include' || '' }}
+          OPENSSL_NO_VENDOR: ${{ env.OPENSSL_NO_VENDOR }}
+          VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
           PKG_CONFIG_ALLOW_CROSS: ${{ contains(matrix.target, 'windows-gnu') && '1' || '' }}
           PKG_CONFIG_PATH: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/lib/pkgconfig' || '' }}
         run: cargo build --release --target ${{ matrix.target }}
