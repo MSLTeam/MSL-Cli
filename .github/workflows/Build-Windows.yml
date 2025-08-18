@@ -27,6 +27,7 @@ jobs:
 
 
   build-windows-gnu:
+    name: Windows GNU
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +41,7 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-rust
 
       - name: Set OpenSSL env vars
         run: |
