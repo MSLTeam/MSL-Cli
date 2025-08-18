@@ -14,28 +14,77 @@ env:
 
 jobs:
   build:
-    name: Build (${{ matrix.os }}-${{ matrix.target }})
+    name: Build (${{ matrix.os }}–${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Existing matrix configurations remain unchanged
+          # Linux
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-musleabihf
+          # Android
+          - os: ubuntu-latest
+            target: aarch64-linux-android
+          - os: ubuntu-latest
+            target: armv7-linux-androideabi
+          # Windows
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+          # macOS
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          # FreeBSD
+          - os: ubuntu-latest
+            target: x86_64-unknown-freebsd
+          - os: ubuntu-latest
+            target: aarch64-unknown-freebsd
+          # OpenBSD
+          - os: ubuntu-latest
+            target: x86_64-unknown-openbsd
+          # iOS
+          - os: macos-latest
+            target: aarch64-apple-ios
+          # WASM
+          - os: ubuntu-latest
+            target: wasm32-unknown-unknown
+          - os: ubuntu-latest
+            target: wasm32-wasi
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # Install jq on respective OS
-      - name: Install jq
+      - name: Install jq on Linux
+        if: runner.os == 'Linux'
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get update && sudo apt-get install -y jq
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install jq
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            choco install jq -y
-          fi
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Install jq on macOS
+        if: runner.os == 'macOS'
+        run: brew install jq
+
+      - name: Install jq on Windows
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: choco install jq -y
 
       - name: Setup Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -45,30 +94,46 @@ jobs:
           profile: minimal
           targets: ${{ matrix.target }}
 
-      # Configure OpenSSL for all Windows environments
+      - name: Add AArch64 MSVC target if needed
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        shell: powershell
+        run: rustup target add aarch64-pc-windows-msvc
+
       - name: Install Strawberry Perl & OpenSSL for Windows
         if: runner.os == 'Windows'
         shell: powershell
         run: |
           choco install strawberryperl -y
           choco install openssl.light -y
-          $opensslDir = 'C:\Program Files\OpenSSL-Win64'
-          $opensslBin = "$opensslDir\bin"
-          if (Test-Path $opensslBin) {
-            Add-Content -Path $env:GITHUB_PATH -Value $opensslBin
-            Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_DIR=$opensslDir"
-            Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_LIB_DIR=$opensslDir\lib"
-            Add-Content -Path $env:GITHUB_ENV -Value "OPENSSL_INCLUDE_DIR=$opensslDir\include"
+          $bin = 'C:\Program Files\OpenSSL-Win64\bin'
+          if (Test-Path $bin) {
+            Add-Content -Path $env:GITHUB_PATH -Value $bin
           }
+          # Install missing Perl module for openssl-sys
+          cpan -q -i Locale::Maketext::Simple
+          # Export OpenSSL env vars
+          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_NO_VENDOR=1'
+          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_DIR=C:\Program Files\OpenSSL-Win64'
+          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_LIB_DIR=C:\Program Files\OpenSSL-Win64\lib'
+          Add-Content -Path $env:GITHUB_ENV -Value 'OPENSSL_INCLUDE_DIR=C:\Program Files\OpenSSL-Win64\include'
 
-      - name: Install cross for non-Windows
+      - name: Install cross (non-Windows)
         if: runner.os != 'Windows'
         run: cargo install cross
+
+      - name: Set cross nightly Docker image (aarch64-android)
+        if: startsWith(matrix.target, 'aarch64-linux-android')
+        run: echo "CROSS_DOCKER_IMAGE=ghcr.io/cross-rs/aarch64-linux-android:nightly" >> $GITHUB_ENV
+
+      - name: Set cross nightly Docker image (armv7-android)
+        if: startsWith(matrix.target, 'armv7-linux-androideabi')
+        run: echo "CROSS_DOCKER_IMAGE=ghcr.io/cross-rs/armv7-linux-androideabi:nightly" >> $GITHUB_ENV
 
       - name: Get crate version
         shell: bash
         run: |
-          VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')
+          VERSION=$(cargo metadata --no-deps --format-version=1 \
+            | jq -r '.packages[0].version')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Build release binary
@@ -77,7 +142,7 @@ jobs:
           OPENSSL_NO_VENDOR: "1"
           OPENSSL_STATIC: "0"
         run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             cargo build --release --target ${{ matrix.target }}
           else
             cross build --release --target ${{ matrix.target }}
@@ -85,7 +150,8 @@ jobs:
 
       - name: Prepare artifacts dir
         run: |
-          rm -rf artifacts && mkdir artifacts
+          rm -rf artifacts
+          mkdir artifacts
 
       - name: Package artifact
         shell: bash
@@ -93,16 +159,22 @@ jobs:
           set -euo pipefail
           echo "Looking in target/${{ matrix.target }}/release"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            BIN=$(find "target/${{ matrix.target }}/release" -type f -name "*.exe" -print -quit)
+            BIN=$(find "target/${{ matrix.target }}/release" \
+              -type f -name "*.exe" -print -quit)
           else
-            BIN=$(find "target/${{ matrix.target }}/release" -type f -perm -u+x -print -quit)
+            BIN=$(find "target/${{ matrix.target }}/release" \
+              -type f -perm -u+x -print -quit)
           fi
-          test -n "$BIN" || { echo "No binary for ${{ matrix.target }}" >&2; ls target/${{ matrix.target }}/release; exit 1; }
+          test -n "$BIN" || { echo "No binary for ${{ matrix.target }}" \
+            >&2; ls target/${{ matrix.target }}/release; exit 1; }
           cp "$BIN" artifacts/
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            powershell -Command "Get-FileHash -Algorithm SHA256 '$BIN' | Select -Expand Hash | Out-File -Encoding ascii artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
+            powershell -Command \
+              "Get-FileHash -Algorithm SHA256 '$BIN' | Select -Expand Hash \
+              | Out-File -Encoding ascii artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
           else
-            shasum -a 256 "$BIN" > "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
+            shasum -a 256 "$BIN" > \
+              "artifacts/${{ env.VERSION }}-${{ matrix.target }}.sha256"
           fi
 
       - name: Upload artifact
@@ -128,4 +200,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: artifacts/**
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'rc') || contains(github.ref, 'nightly') }}
+          prerelease: ${{ contains(github.ref, 'beta') ||
+                       contains(github.ref, 'rc') ||
+                       contains(github.ref, 'nightly') }}
