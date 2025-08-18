@@ -10,63 +10,65 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
-    name: Build for ${{ matrix.target }}
+  build:
     runs-on: windows-latest
-
     strategy:
+      fail-fast: false
       matrix:
         include:
-          # MSVC targets
+          # MSVC 架构
           - target: i686-pc-windows-msvc
             msystem: ''
           - target: x86_64-pc-windows-msvc
             msystem: ''
           - target: aarch64-pc-windows-msvc
             msystem: ''
-          # GNU targets
+          # GNU 架构（暂支持 32/64，ARM64-GNU 可考虑用 cross 在 Linux 上编译）
           - target: i686-pc-windows-gnu
             msystem: MINGW32
           - target: x86_64-pc-windows-gnu
             msystem: MINGW64
 
     steps:
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 1) 仅 GNU 分支需要 MSYS2 + OpenSSL
-      - name: Set PREFIX for GNU target
-        if: ${{ contains(matrix.target, 'windows-gnu') }}
-        shell: bash
+      # MSYS2 + OpenSSL（仅 GNU）
+      - name: Set PREFIX for GNU
+        if: contains(matrix.target, 'windows-gnu')
         run: |
-          if [[ "${{ matrix.msystem }}" == "MINGW32" ]]; then
-            echo "PREFIX=i686" >> $GITHUB_ENV
-          else
-            echo "PREFIX=x86_64" >> $GITHUB_ENV
-          fi
+          [[ "${{ matrix.msystem }}" == "MINGW32" ]] && echo "PREFIX=i686" >> $GITHUB_ENV || echo "PREFIX=x86_64" >> $GITHUB_ENV
+        shell: bash
 
-      - name: Install MSYS2 & OpenSSL (GNU targets)
-        if: ${{ contains(matrix.target, 'windows-gnu') }}
+      - name: Install MSYS2 & OpenSSL (GNU)
+        if: contains(matrix.target, 'windows-gnu')
         uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.msystem }}
           update: true
           install: |
-            mingw-w64-${{ env.PREFIX }}-gcc
-            mingw-w64-${{ env.PREFIX }}-pkg-config
             mingw-w64-${{ env.PREFIX }}-openssl
+            mingw-w64-${{ env.PREFIX }}-pkg-config
 
-      # 2) 统一安装 Rust toolchain
+      # Rust toolchain
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      # 3) 构建
-      - name: Build
+      # 构建
+      - name: Build (${{ matrix.target }})
+        shell: bash
+        env:
+          # 只在 GNU 分支生效
+          OPENSSL_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64' || '' }}
+          OPENSSL_LIB_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/lib' || '' }}
+          OPENSSL_INCLUDE_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/include' || '' }}
+          PKG_CONFIG_ALLOW_CROSS: ${{ contains(matrix.target, 'windows-gnu') && '1' || '' }}
+          PKG_CONFIG_PATH: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/lib/pkgconfig' || '' }}
         run: cargo build --release --target ${{ matrix.target }}
 
-      # 4) 上传到同一个 Draft Release
+      # 上传到同一个 Draft Release
       - name: Attach to Draft Release
         uses: softprops/action-gh-release@v2
         with:
