@@ -84,3 +84,40 @@ jobs:
       - name: Build (MSVC ARM64)
         run: cargo build --release --target aarch64-pc-windows-msvc
         shell: bash
+
+  build-windows-aarch64-gnu:
+    name: Windows GNU (ARM64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. 安装 MSYS2 ARM64 环境和依赖
+      - name: Install MSYS2 & deps (MINGW64 ARM64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-aarch64-gcc
+            mingw-w64-aarch64-pkg-config
+            mingw-w64-aarch64-openssl
+
+      # 2. 设置 OpenSSL 环境变量，强制使用系统库
+      - name: Set OpenSSL env
+        shell: bash
+        run: |
+          echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
+          echo "OPENSSL_DIR=/clang64" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/clang64/lib" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/clang64/include" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/clang64/lib/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+
+      # 3. 安装 Rust ARM64 GNU target
+      - name: Add aarch64-pc-windows-gnu target
+        run: rustup target add aarch64-pc-windows-gnu
+
+      # 4. 构建（在 MSYS2 shell 中使用 GNU 工具链）
+      - name: Build (GNU ARM64)
+        shell: msys2 {0}
+        run: cargo build --release --target aarch64-pc-windows-gnu
