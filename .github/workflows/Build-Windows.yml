@@ -22,7 +22,7 @@ jobs:
           vcpkg install openssl:x64-windows
           echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
 
-      - name: Build (MSVC)
+      - name: Build (MSVC x86_64)
         run: cargo build --release --target x86_64-pc-windows-msvc
 
   build-windows-gnu-x86_64:
@@ -43,6 +43,7 @@ jobs:
             mingw-w64-x86_64-rust
 
       - name: Set OpenSSL env vars
+        shell: bash
         run: |
           echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
           echo "OPENSSL_DIR=/mingw64" >> $GITHUB_ENV
@@ -51,16 +52,31 @@ jobs:
           echo "PKG_CONFIG_PATH=/mingw64/lib/pkgconfig" >> $GITHUB_ENV
           echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
 
+      - name: Build (GNU x86_64)
+        shell: msys2 {0}
+        run: cargo build --release --target x86_64-pc-windows-gnu
+        
   build-windows-msvc-arm64: 
     name: Windows MSVC (ARM64)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         
-      - name: Install OpenSSL via vcpkg (ARM64)
+      # 1. 安装 vcpkg
+      - name: Install vcpkg
         run: |
-          vcpkg install openssl:arm64-windows
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+
+      # 2. 安装 ARM64 OpenSSL
+      - name: Install OpenSSL (ARM64)
+        run: |
+          C:\vcpkg\vcpkg.exe install openssl:arm64-windows
           echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
+          echo "OPENSSL_DIR=C:\vcpkg\installed\arm64-windows" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=C:\vcpkg\installed\arm64-windows\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=C:\vcpkg\installed\arm64-windows\include" >> $env:GITHUB_ENV
             
       - name: Install ARM64 target
         run: rustup target add aarch64-pc-windows-msvc
