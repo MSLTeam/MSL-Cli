@@ -83,13 +83,32 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install jq -y
 
-
       - name: Setup Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
+          profile: minimal
           targets: ${{ matrix.target }}
+
+      # MSVC Windows: install Perl & system OpenSSL
+      - name: Install Strawberry Perl & OpenSSL (MSVC)
+        if: matrix.target == 'x86_64-pc-windows-msvc' || matrix.target == 'aarch64-pc-windows-msvc'
+        shell: powershell
+        run: |
+          choco install strawberryperl -y
+          choco install openssl.light -y
+          $opensslBin = 'C:\Program Files\OpenSSL-Win64\bin'
+          if (Test-Path $opensslBin) {
+            Add-Content -Path $env:GITHUB_PATH -Value $opensslBin
+          }
+
+      # GNU Windows: install Perl module & OpenSSL via MSYS2
+      - name: Install Perl module & OpenSSL (GNU)
+        if: matrix.target == 'x86_64-pc-windows-gnu'
+        shell: bash
+        run: |
+          pacman -Sy --noconfirm perl-text-maketext-simple openssl
 
       - name: Install cross (非 Windows)
         if: runner.os != 'Windows'
@@ -112,6 +131,8 @@ jobs:
 
       - name: Build release binary
         shell: bash
+        env:
+          OPENSSL_STATIC: 0
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             cargo build --release --target ${{ matrix.target }}
