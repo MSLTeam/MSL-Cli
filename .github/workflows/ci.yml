@@ -95,11 +95,14 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Setup Android NDK
-        uses: android-actions/setup-ndk@v2
+        if: matrix.target == 'aarch64-linux-android'
+        uses: nttld/setup-ndk@v1
         with:
-          ndk-version: "27.3.13750724"
+          ndk-version: r27d
+          local-cache: true
 
       - name: Check NDK Path
+        if: matrix.target == 'aarch64-linux-android'
         run: echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
 
       - name: Add AArch64 MSVC target if needed
