@@ -148,12 +148,14 @@ jobs:
         env:
           OPENSSL_NO_VENDOR: "1"
           OPENSSL_STATIC: "0"
+          RUSTFLAGS: "-C panic=abort"
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             cargo build --release --target ${{ matrix.target }}
           else
             cross build --release --target ${{ matrix.target }}
           fi
+
 
       - name: Prepare artifacts dir
         shell: bash
