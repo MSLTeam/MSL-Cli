@@ -104,11 +104,17 @@ jobs:
           }
 
       # GNU Windows: install Perl module & OpenSSL via MSYS2
-      - name: Install Perl module & OpenSSL (GNU)
-        if: matrix.target == 'x86_64-pc-windows-gnu'
-        shell: bash
+      - name: Install Perl & OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        env:
+          OPENSSL_NO_VENDOR: "1"
+          OPENSSL_DIR: "C:\\Program Files\\OpenSSL-Win64"
         run: |
-          pacman -Sy --noconfirm perl-text-maketext-simple openssl
+          choco install strawberryperl -y
+          choco install openssl.light -y
+          # 安装 emoji-sys 构建时缺少的 Perl 模块
+          cpan install Locale::Maketext::Simple
 
       - name: Install cross (非 Windows)
         if: runner.os != 'Windows'
