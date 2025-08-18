@@ -94,6 +94,14 @@ jobs:
           profile: minimal
           targets: ${{ matrix.target }}
 
+      - name: Setup Android NDK
+        uses: android-actions/setup-ndk@v2
+        with:
+          ndk-version: "27.3.13750724"
+
+      - name: Check NDK Path
+        run: echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
+
       - name: Add AArch64 MSVC target if needed
         if: matrix.target == 'aarch64-pc-windows-msvc'
         shell: powershell
