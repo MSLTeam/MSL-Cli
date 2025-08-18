@@ -2,87 +2,37 @@ name: Build For Windows
 
 on:
   push:
-    tags:
-      - 'v*'
-      - 'v*-beta*'
-      - 'v*-rc*'
-      - 'nightly*'
-  workflow_dispatch:
+    branches: [main]
+  pull_request:
 
 jobs:
-  build:
+  build-windows-msvc:
+    name: Windows MSVC
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # MSVC 架构
-          - target: i686-pc-windows-msvc
-            msystem: ''
-          - target: x86_64-pc-windows-msvc
-            msystem: ''
-          - target: aarch64-pc-windows-msvc
-            msystem: ''
-          # GNU 架构（暂支持 32/64，ARM64-GNU 可考虑用 cross 在 Linux 上编译）
-          - target: i686-pc-windows-gnu
-            msystem: MINGW32
-          - target: x86_64-pc-windows-gnu
-            msystem: MINGW64
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # MSYS2 + OpenSSL（仅 GNU）
-      - name: Set PREFIX for GNU
-        if: contains(matrix.target, 'windows-gnu')
-        run: |
-          [[ "${{ matrix.msystem }}" == "MINGW32" ]] && echo "PREFIX=i686" >> $GITHUB_ENV || echo "PREFIX=x86_64" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Install MSYS2 & OpenSSL (GNU)
-        if: contains(matrix.target, 'windows-gnu')
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: ${{ matrix.msystem }}
-          update: true
-          install: |
-            mingw-w64-${{ env.PREFIX }}-openssl
-            mingw-w64-${{ env.PREFIX }}-pkg-config
+      - uses: actions/checkout@v4
 
       - name: Install OpenSSL via vcpkg
         run: |
           vcpkg install openssl:x64-windows
-          echo "VCPKG_ROOT=C:\\vcpkg" >> $GITHUB_ENV
           echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
 
-      # Rust toolchain
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+      - name: Build (MSVC)
+        run: cargo build --release --target x86_64-pc-windows-msvc
 
-      # 构建
-      - name: Build (${{ matrix.target }})
+  build-windows-gnu:
+    name: Windows GNU
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MSYS2 and OpenSSL
+        run: |
+          choco install msys2
+          echo "C:\tools\msys64\usr\bin" >> $GITHUB_PATH
+          echo "OPENSSL_DIR=C:\tools\msys64\usr" >> $GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
+
+      - name: Build (GNU)
         shell: bash
-        env:
-          # 只在 GNU 分支生效
-          OPENSSL_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64' || '' }}
-          OPENSSL_LIB_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/lib' || '' }}
-          OPENSSL_INCLUDE_DIR: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/include' || '' }}
-          OPENSSL_NO_VENDOR: ${{ env.OPENSSL_NO_VENDOR }}
-          VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
-          PKG_CONFIG_ALLOW_CROSS: ${{ contains(matrix.target, 'windows-gnu') && '1' || '' }}
-          PKG_CONFIG_PATH: ${{ contains(matrix.target, 'windows-gnu') && '/mingw64/lib/pkgconfig' || '' }}
-        run: cargo build --release --target ${{ matrix.target }}
-
-      # 上传到同一个 Draft Release
-      - name: Attach to Draft Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          draft: true
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'rc') || contains(github.ref, 'nightly') }}
-          files: target/${{ matrix.target }}/release/msl-cli.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo build --release --target x86_64-pc-windows-gnu
