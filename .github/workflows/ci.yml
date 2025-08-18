@@ -149,9 +149,9 @@ jobs:
           fi
 
       - name: Prepare artifacts dir
+        shell: bash
         run: |
-          rm -rf artifacts
-          mkdir artifacts
+          rm -rf artifacts && mkdir artifacts
 
       - name: Package artifact
         shell: bash
