@@ -159,6 +159,8 @@ jobs:
       - name: Build release binary
         shell: bash
         env:
+          OPENSSL_NO_VENDOR: "1"
+          OPENSSL_STATIC: "0"
           RUSTFLAGS: "-C panic=abort"
         run: |
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
