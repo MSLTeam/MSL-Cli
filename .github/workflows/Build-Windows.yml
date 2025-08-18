@@ -3,27 +3,50 @@ name: Build For Windows
 on:
   push:
     tags:
-      - "v*"
-      - "v*-beta*"
-      - "v*-rc*"
-      - "nightly*"
+      - 'v*'
+      - 'v*-beta*'
+      - 'v*-rc*'
+      - 'nightly*'
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build:
+    name: Build for ${{ matrix.target }}
     runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          # MSVC targets
+          - target: i686-pc-windows-msvc
+          - target: x86_64-pc-windows-msvc
+          - target: aarch64-pc-windows-msvc
+          # GNU targets
+          - target: i686-pc-windows-gnu
+            msystem: MINGW32
+          - target: x86_64-pc-windows-gnu
+            msystem: MINGW64
+          - target: aarch64-pc-windows-gnu
+            msystem: MINGW64
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: Install MSYS2 (for GNU targets)
+        if: contains(matrix.target, 'windows-gnu')
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: gcc make pkg-config libssl-devel
+
+      - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: ${{ matrix.target }}
 
-      - name: Build Windows binary
-        run: cargo build --release --target x86_64-pc-windows-msvc
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Attach to Draft Release
         uses: softprops/action-gh-release@v2
@@ -31,6 +54,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           draft: true
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'rc') || contains(github.ref, 'nightly') }}
-          files: target/x86_64-pc-windows-msvc/release/msl-cli.exe
+          files: target/${{ matrix.target }}/release/msl-cli.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
