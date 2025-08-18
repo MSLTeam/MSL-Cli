@@ -143,19 +143,38 @@ jobs:
             | jq -r '.packages[0].version')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+      - name: Conditionally create custom target file
+        run: |
+          if [[ "${{ matrix.target }}" == "aarch64-linux-android" ]]; then
+            echo '{
+              "llvm-target": "aarch64-linux-android",
+              "target-endian": "little",
+              "target-pointer-width": "64",
+              "target-c-int-width": "32",
+              "arch": "aarch64",
+              "os": "android",
+              "abi": "linux",
+              "features": "+neon",
+              "panic-strategy": "abort",
+              "linker-flavor": "gcc",
+              "linker": "aarch64-linux-android21-clang",
+              "relocation-model": "pic",
+              "disable-redzone": true,
+              "executables": true
+            }' > ./custom-android-target.json
+          fi
+
       - name: Build release binary
         shell: bash
         env:
           OPENSSL_NO_VENDOR: "1"
           OPENSSL_STATIC: "0"
-          RUSTFLAGS: "-C panic=abort"
         run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cargo build --release --target ${{ matrix.target }}
+          if [[ -f "./custom-android-target.json" ]]; then
+            cross build --release --target ./custom-android-target.json
           else
             cross build --release --target ${{ matrix.target }}
           fi
-
 
       - name: Prepare artifacts dir
         shell: bash
