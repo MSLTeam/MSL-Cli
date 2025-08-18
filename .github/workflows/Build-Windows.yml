@@ -55,4 +55,4 @@ jobs:
 
       - name: Build (GNU)
         shell: msys2 {0}
-        run: cargo build --release --target 
+        run: cargo build --release --target x86_64-pc-windows-gnu
