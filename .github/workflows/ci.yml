@@ -91,6 +91,12 @@ jobs:
           profile: minimal
           targets: ${{ matrix.target }}
 
+      - name: Add aarch64-msvc target (if needed)
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        run: rustup target add aarch64-pc-windows-msvc
+        shell: powershell
+
+
       # MSVC Windows: install Perl & system OpenSSL
       - name: Install Strawberry Perl & OpenSSL (MSVC)
         if: matrix.target == 'x86_64-pc-windows-msvc' || matrix.target == 'aarch64-pc-windows-msvc'
