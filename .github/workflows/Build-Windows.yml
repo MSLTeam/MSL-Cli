@@ -85,39 +85,31 @@ jobs:
         run: cargo build --release --target aarch64-pc-windows-msvc
         shell: bash
 
-  build-windows-aarch64-gnu:
-    name: Windows GNU (ARM64)
+
+  build-windows-arm64-gnu-clang:
+    name: Windows GNU (AMR64 via Clang)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      # 1. 安装 MSYS2 ARM64 环境和依赖
-      - name: Install MSYS2 & deps (MINGW64 ARM64)
-        uses: msys2/setup-msys2@v2
+      # 安装 LLVM / Clang
+      - name: Install LLVM
+        uses: KyleMayes/install-llvm-action@v2
         with:
-          msystem: UCRT64
-          update: true
-          install: >-
-            mingw-w64-aarch64-gcc
-            mingw-w64-aarch64-pkg-config
-            mingw-w64-aarch64-openssl
+          version: "20" # 固定版本，避免 LLVM 更新带来不兼容
 
-      # 2. 设置 OpenSSL 环境变量，强制使用系统库
-      - name: Set OpenSSL env
-        shell: bash
-        run: |
-          echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
-          echo "OPENSSL_DIR=/clang64" >> $GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=/clang64/lib" >> $GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=/clang64/include" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=/clang64/lib/pkgconfig" >> $GITHUB_ENV
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-
-      # 3. 安装 Rust ARM64 GNU target
-      - name: Add aarch64-pc-windows-gnu target
+      # 安装 Rust ARM64 GNU target
+      - name: Add Rust target
         run: rustup target add aarch64-pc-windows-gnu
 
-      # 4. 构建（在 MSYS2 shell 中使用 GNU 工具链）
-      - name: Build (GNU ARM64)
-        shell: msys2 {0}
+      # 配置交叉编译器
+      - name: Set env for ARM64 GNU
+        run: |
+          echo "CC_aarch64_pc_windows_gnu=clang" >> $env:GITHUB_ENV
+          echo "AR_aarch64_pc_windows_gnu=llvm-ar" >> $env:GITHUB_ENV
+          echo "CARGO_TARGET_AARCH64_PC_WINDOWS_GNU_LINKER=clang" >> $env:GITHUB_ENV
+          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
+
+      # 构建
+      - name: Build (Clang ARM64 GNU)
         run: cargo build --release --target aarch64-pc-windows-gnu
