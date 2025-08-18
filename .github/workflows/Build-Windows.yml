@@ -85,31 +85,24 @@ jobs:
         run: cargo build --release --target aarch64-pc-windows-msvc
         shell: bash
 
-
-  build-windows-arm64-gnu-clang:
-    name: Windows GNU (AMR64 via Clang)
+  windows-i686-msvc:
+    name: Windows MSVC (i686)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # 安装 LLVM / Clang
-      - name: Install LLVM
-        uses: KyleMayes/install-llvm-action@v2
-        with:
-          version: "20" # 固定版本，避免 LLVM 更新带来不兼容
-
-      # 安装 Rust ARM64 GNU target
-      - name: Add Rust target
-        run: rustup target add aarch64-pc-windows-gnu
-
-      # 配置交叉编译器
-      - name: Set env for ARM64 GNU
+      - name: Install Rust (i686 MSVC)
         run: |
-          echo "CC_aarch64_pc_windows_gnu=clang" >> $env:GITHUB_ENV
-          echo "AR_aarch64_pc_windows_gnu=llvm-ar" >> $env:GITHUB_ENV
-          echo "CARGO_TARGET_AARCH64_PC_WINDOWS_GNU_LINKER=clang" >> $env:GITHUB_ENV
-          echo "OPENSSL_NO_VENDOR=1" >> $env:GITHUB_ENV
+          rustup set profile minimal
+          rustup install stable
+          rustup target add i686-pc-windows-msvc
 
-      # 构建
-      - name: Build (Clang ARM64 GNU)
-        run: cargo build --release --target aarch64-pc-windows-gnu
+      - name: Build (i686 MSVC)
+        run: cargo build --target i686-pc-windows-msvc --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mytool-windows-i686-msvc
+          path: target/i686-pc-windows-msvc/release/mytool.exe
