@@ -117,22 +117,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. 拉取源码
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 安装 GNU Windows on ARM64 的交叉编译工具链
-      - name: Install AArch64 MinGW toolchain
+      # 2. 下载并安装预编译工具链
+      - name: Install experimental AArch64 MinGW toolchain
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-w64-mingw32
+          mkdir -p /tmp/toolchain
+          wget -q https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-toolchain.tar.xz
+          sudo tar -C /usr/local -xf aarch64-w64-mingw32-toolchain.tar.xz
+          echo "/usr/local/aarch64-w64-mingw32/bin" | sudo tee -a /etc/environment
+          echo "/usr/local/aarch64-w64-mingw32/bin" >> $GITHUB_PATH
+          aarch64-w64-mingw32-gcc --version
 
-      # 装 nightly + aarch64-pc-windows-gnu 目标
+      # 3. 安装 Rust nightly + 目标架构
       - name: Install Rust nightly + target
         run: |
           rustup install nightly
           rustup target add aarch64-pc-windows-gnu --toolchain nightly
 
-      # 构建 std + release
+      # 4. 构建 std + release
       - name: Build (nightly + build-std)
         run: |
           cargo +nightly build \
