@@ -25,6 +25,9 @@ jobs:
       - name: Build (MSVC x86_64)
         run: cargo build --release --target x86_64-pc-windows-msvc
 
+      - name: Rename artifact
+        run: mv target/x86_64-pc-windows-msvc/release/mytool.exe target/x86_64-pc-windows-msvc/release/mytool-x86_64-pc-windows-msvc.exe
+
   build-windows-gnu-x86_64:
     name: Windows GNU (x86_64)
     runs-on: windows-latest
@@ -55,21 +58,23 @@ jobs:
       - name: Build (GNU x86_64)
         shell: msys2 {0}
         run: cargo build --release --target x86_64-pc-windows-gnu
-        
+
+      - name: Rename artifact
+        shell: bash
+        run: mv target/x86_64-pc-windows-gnu/release/mytool.exe target/x86_64-pc-windows-gnu/release/mytool-x86_64-pc-windows-gnu.exe
+
   build-windows-msvc-arm64: 
     name: Windows MSVC (ARM64)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         
-      # 1. 安装 vcpkg
       - name: Install vcpkg
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
           C:\vcpkg\bootstrap-vcpkg.bat
           echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
 
-      # 2. 安装 ARM64 OpenSSL
       - name: Install OpenSSL (ARM64)
         run: |
           C:\vcpkg\vcpkg.exe install openssl:arm64-windows
@@ -83,6 +88,10 @@ jobs:
           
       - name: Build (MSVC ARM64)
         run: cargo build --release --target aarch64-pc-windows-msvc
+        shell: bash
+
+      - name: Rename artifact
+        run: mv target/aarch64-pc-windows-msvc/release/mytool.exe target/aarch64-pc-windows-msvc/release/mytool-aarch64-pc-windows-msvc.exe
         shell: bash
 
   windows-i686-msvc:
@@ -101,11 +110,8 @@ jobs:
       - name: Build (i686 MSVC)
         run: cargo build --target i686-pc-windows-msvc --release
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mytool-windows-i686-msvc
-          path: target/i686-pc-windows-msvc/release/mytool.exe
+      - name: Rename artifact
+        run: mv target/i686-pc-windows-msvc/release/mytool.exe target/i686-pc-windows-msvc/release/mytool-i686-pc-windows-msvc.exe
 
   windows-i686-gnu:
     name: Windows GNU (i686)
@@ -114,7 +120,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 安装 i686 GNU 构建所需的工具链和依赖
       - name: Install MSYS2 & deps (MINGW32)
         uses: msys2/setup-msys2@v2
         with:
@@ -126,7 +131,6 @@ jobs:
             mingw-w64-i686-openssl
             mingw-w64-i686-rust
 
-      # 配置环境变量，强制使用系统 OpenSSL
       - name: Set OpenSSL env
         shell: bash
         run: |
@@ -137,11 +141,13 @@ jobs:
           echo "PKG_CONFIG_PATH=/mingw32/lib/pkgconfig" >> $GITHUB_ENV
           echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
 
-      # 安装 Rust i686 GNU target
       - name: Add i686 GNU target
         run: rustup target add i686-pc-windows-gnu
 
-      # 构建（必须在 MSYS2 shell 中执行以调用 GNU 工具链）
       - name: Build (GNU i686)
         shell: msys2 {0}
         run: cargo build --release --target i686-pc-windows-gnu
+
+      - name: Rename artifact
+        shell: bash
+        run: mv target/i686-pc-windows-gnu/release/mytool.exe target/i686-pc-windows-gnu/release/mytool-i686-pc-windows-gnu.exe
