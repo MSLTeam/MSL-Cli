@@ -114,7 +114,7 @@ jobs:
 
   build-aarch64-windows-gnu:
     name: Windows GNU (ARM64)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       # 1. 拉取源码
@@ -124,7 +124,7 @@ jobs:
       # 2. 下载并安装社区版 ARM64 GNU 工具链
       - name: Setup mingw-woarm64-build toolchain
         run: |
-          git clone https://github.com/mstorsjo/llvm-mingw.git
+          git clone https://gh-proxy.com/github.com/mstorsjo/llvm-mingw.git
           cd llvm-mingw
           ./build-all.sh $HOME/llvm-mingw-aarch64
           echo "$HOME/llvm-mingw-aarch64/bin" >> $GITHUB_PATH
