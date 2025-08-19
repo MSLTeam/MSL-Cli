@@ -126,7 +126,7 @@ jobs:
         run: |
           git clone https://github.com/mstorsjo/llvm-mingw.git
           cd llvm-mingw
-          ./build-all.sh --aarch64
+          ./build-all.sh
           echo "$PWD/bin" >> $GITHUB_PATH
           $GITHUB_PATH/aarch64-w64-mingw32-gcc --version
 
