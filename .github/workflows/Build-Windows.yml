@@ -121,25 +121,29 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # 2. 下载预编译 GNU ARM64 工具链到当前工作区
       - name: Download toolchain
         run: |
-          wget -O toolchain.tar.xz https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-msvcrt-toolchain.tar.gz
+          wget -O toolchain.tar.xz https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-toolchain.tar.xz
           ls -lh toolchain.tar.xz
 
-      - name: Extract toolchain
+      # 3. 解压到 $HOME 下，避免 sudo 权限问题
+      - name: Extract toolchain to HOME
         run: |
-          mkdir -p /usr/local/aarch64-w64-mingw32
-          sudo tar -xf toolchain.tar.xz -C /usr/local/aarch64-w64-mingw32 --strip-components=1
-          ls -R /usr/local/aarch64-w64-mingw32/bin
-          /usr/local/aarch64-w64-mingw32/bin/aarch64-w64-mingw32-gcc --version
+          TOOLCHAIN_DIR="$HOME/aarch64-w64-mingw32"
+          mkdir -p "$TOOLCHAIN_DIR"
+          tar -xf toolchain.tar.xz -C "$TOOLCHAIN_DIR" --strip-components=1
+          ls -R "$TOOLCHAIN_DIR/bin"
+          echo "$TOOLCHAIN_DIR/bin" >> $GITHUB_PATH
+          "$TOOLCHAIN_DIR/bin/aarch64-w64-mingw32-gcc" --version
 
-      # 3. 安装 Rust nightly + 目标架构
+      # 4. 安装 Rust nightly + 目标架构
       - name: Install Rust nightly + target
         run: |
           rustup install nightly
           rustup target add aarch64-pc-windows-gnu --toolchain nightly
 
-      # 4. 构建 std + release
+      # 5. 构建 std + release
       - name: Build (nightly + build-std)
         run: |
           cargo +nightly build \
@@ -147,14 +151,14 @@ jobs:
             --target aarch64-pc-windows-gnu \
             -Z build-std
 
-      # 产物重命名，保持唯一性
+      # 6. 重命名产物
       - name: Rename artifact
         run: |
           mkdir -p dist
           cp target/aarch64-pc-windows-gnu/release/msl-cli.exe \
              dist/msl-cli-aarch64-pc-windows-gnu.exe
 
-      # 上传产物到 CI artifacts
+      # 7. 上传产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
