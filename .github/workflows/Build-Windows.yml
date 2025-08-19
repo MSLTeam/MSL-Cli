@@ -121,44 +121,40 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 2. 下载预编译 GNU ARM64 工具链到当前工作区
-      - name: Download toolchain
+      # 2. 安装官方交叉编译工具链（x86_64 → Windows ARM64）
+      - name: Install aarch64 mingw-w64 toolchain
         run: |
-          wget -O toolchain.tar.xz https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-msvcrt-toolchain.tar.gz
-          ls -lh toolchain.tar.xz
+          sudo apt-get update
+          sudo apt-get install -y \
+            g++-aarch64-w64-mingw32 \
+            binutils-aarch64-w64-mingw32 \
+            gcc-aarch64-w64-mingw32
 
-      # 3. 解压到 $HOME 下，避免 sudo 权限问题
-      - name: Extract toolchain to HOME
-        run: |
-          TOOLCHAIN_DIR="$HOME/aarch64-w64-mingw32"
-          mkdir -p "$TOOLCHAIN_DIR"
-          tar -xf toolchain.tar.xz -C "$TOOLCHAIN_DIR" --strip-components=1
-          ls -R "$TOOLCHAIN_DIR/bin"
-          echo "$TOOLCHAIN_DIR/bin" >> $GITHUB_PATH
-          "$TOOLCHAIN_DIR/bin/aarch64-w64-mingw32-gcc" --version
-
-      # 4. 安装 Rust nightly + 目标架构
+      # 3. 安装 Rust nightly + 目标架构
       - name: Install Rust nightly + target
         run: |
           rustup install nightly
           rustup target add aarch64-pc-windows-gnu --toolchain nightly
 
-      # 5. 构建 std + release
+      # 4. 构建 std + release
       - name: Build (nightly + build-std)
+        env:
+          CC_aarch64_pc_windows_gnu: aarch64-w64-mingw32-gcc
+          CXX_aarch64_pc_windows_gnu: aarch64-w64-mingw32-g++
         run: |
           cargo +nightly build \
             --release \
             --target aarch64-pc-windows-gnu \
             -Z build-std
 
-      # 6. 重命名产物
+      # 5. 重命名产物
       - name: Rename artifact
         run: |
           mkdir -p dist
           cp target/aarch64-pc-windows-gnu/release/msl-cli.exe \
              dist/msl-cli-aarch64-pc-windows-gnu.exe
 
-      # 7. 上传产物
+      # 6. 上传产物
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
