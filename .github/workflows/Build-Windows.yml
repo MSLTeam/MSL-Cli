@@ -106,3 +106,42 @@ jobs:
         with:
           name: mytool-windows-i686-msvc
           path: target/i686-pc-windows-msvc/release/mytool.exe
+
+  windows-i686-gnu:
+    name: Windows GNU (i686)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 安装 i686 GNU 构建所需的工具链和依赖
+      - name: Install MSYS2 & deps (MINGW32)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: true
+          install: >-
+            mingw-w64-i686-gcc
+            mingw-w64-i686-pkg-config
+            mingw-w64-i686-openssl
+            mingw-w64-i686-rust
+
+      # 配置环境变量，强制使用系统 OpenSSL
+      - name: Set OpenSSL env
+        shell: bash
+        run: |
+          echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
+          echo "OPENSSL_DIR=/mingw32" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=/mingw32/lib" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=/mingw32/include" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/mingw32/lib/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+
+      # 安装 Rust i686 GNU target
+      - name: Add i686 GNU target
+        run: rustup target add i686-pc-windows-gnu
+
+      # 构建（必须在 MSYS2 shell 中执行以调用 GNU 工具链）
+      - name: Build (GNU i686)
+        shell: msys2 {0}
+        run: cargo build --release --target i686-pc-windows-gnu
