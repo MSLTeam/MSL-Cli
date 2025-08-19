@@ -123,7 +123,7 @@ jobs:
 
       - name: Download toolchain
         run: |
-          wget -O toolchain.tar.xz https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-toolchain.tar.xz
+          wget -O toolchain.tar.xz https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-msvcrt-toolchain.tar.gz
           ls -lh toolchain.tar.xz
 
       - name: Extract toolchain
