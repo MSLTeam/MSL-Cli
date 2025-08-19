@@ -121,15 +121,17 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 2. 下载并安装预编译工具链
-      - name: Install experimental AArch64 MinGW toolchain
+      - name: Download toolchain
         run: |
-          mkdir -p /tmp/toolchain
-          wget -q https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-toolchain.tar.xz
-          sudo tar -C /usr/local -xf aarch64-w64-mingw32-toolchain.tar.xz
-          echo "/usr/local/aarch64-w64-mingw32/bin" | sudo tee -a /etc/environment
-          echo "/usr/local/aarch64-w64-mingw32/bin" >> $GITHUB_PATH
-          aarch64-w64-mingw32-gcc --version
+          wget -O toolchain.tar.xz https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-toolchain.tar.xz
+          ls -lh toolchain.tar.xz
+
+      - name: Extract toolchain
+        run: |
+          mkdir -p /usr/local/aarch64-w64-mingw32
+          sudo tar -xf toolchain.tar.xz -C /usr/local/aarch64-w64-mingw32 --strip-components=1
+          ls -R /usr/local/aarch64-w64-mingw32/bin
+          /usr/local/aarch64-w64-mingw32/bin/aarch64-w64-mingw32-gcc --version
 
       # 3. 安装 Rust nightly + 目标架构
       - name: Install Rust nightly + target
