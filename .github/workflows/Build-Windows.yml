@@ -112,6 +112,48 @@ jobs:
           name: msl-cli-aarch64-pc-windows-msvc
           path: target/aarch64-pc-windows-msvc/release/msl-cli-aarch64-pc-windows-msvc.exe
 
+  build-aarch64-windows-gnu:
+    name: Windows GNU (ARM64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # 安装 GNU Windows on ARM64 的交叉编译工具链
+      - name: Install AArch64 MinGW toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-w64-mingw32
+
+      # 装 nightly + aarch64-pc-windows-gnu 目标
+      - name: Install Rust nightly + target
+        run: |
+          rustup install nightly
+          rustup target add aarch64-pc-windows-gnu --toolchain nightly
+
+      # 构建 std + release
+      - name: Build (nightly + build-std)
+        run: |
+          cargo +nightly build \
+            --release \
+            --target aarch64-pc-windows-gnu \
+            -Z build-std
+
+      # 产物重命名，保持唯一性
+      - name: Rename artifact
+        run: |
+          mkdir -p dist
+          cp target/aarch64-pc-windows-gnu/release/msl-cli.exe \
+             dist/msl-cli-aarch64-pc-windows-gnu.exe
+
+      # 上传产物到 CI artifacts
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-aarch64-pc-windows-gnu
+          path: dist/*.exe
+          
   windows-i686-msvc:
     name: Windows MSVC (i686)
     runs-on: windows-latest
