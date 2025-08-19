@@ -124,7 +124,7 @@ jobs:
       # 2. 下载预编译 GNU ARM64 工具链到当前工作区
       - name: Download toolchain
         run: |
-          wget -O toolchain.tar.xz https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-toolchain.tar.xz
+          wget -O toolchain.tar.xz https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/latest/download/aarch64-w64-mingw32-msvcrt-toolchain.tar.gz
           ls -lh toolchain.tar.xz
 
       # 3. 解压到 $HOME 下，避免 sudo 权限问题
