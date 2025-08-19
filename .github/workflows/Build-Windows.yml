@@ -121,7 +121,18 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 2. 下载并安装社区版 ARM64 GNU 工具链
+      # 2. 安装并配置 Rust 环境
+      - name: Set up Rust toolchain
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          source $HOME/.cargo/env
+          rustup update nightly
+          rustup default nightly
+          rustup component add rust-src rustfmt clippy
+          rustup target add aarch64-pc-windows-gnu
+        shell: bash
+
+      # 3. 下载并安装社区版 ARM64 GNU 工具链
       - name: Setup mingw-woarm64-build toolchain
         run: |
           git clone https://github.com/mstorsjo/llvm-mingw.git
@@ -129,23 +140,19 @@ jobs:
           ./build-all.sh $HOME/llvm-mingw-aarch64
           echo "$HOME/llvm-mingw-aarch64/bin" >> $GITHUB_PATH
           $HOME/llvm-mingw-aarch64/bin/aarch64-w64-mingw32-gcc --version
+        shell: bash
 
-      # 3. 安装 Rust nightly + ARM64 GNU 目标
-      - name: Install Rust nightly + target
-        run: |
-          rustup install nightly
-          rustup target add aarch64-pc-windows-gnu --toolchain nightly
-
-      # 4. 构建 release（同时构建 std）
+      # 4. 构建 std + release
       - name: Build (nightly + build-std)
         env:
-          CC_aarch64_pc_windows_gnu: aarch64-w64-mingw32-gcc
-          CXX_aarch64_pc_windows_gnu: aarch64-w64-mingw32-g++
+          CCaarch64pcwindowsgnu: aarch64-w64-mingw32-gcc
+          CXXaarch64pcwindowsgnu: aarch64-w64-mingw32-g++
         run: |
           cargo +nightly build \
             --release \
             --target aarch64-pc-windows-gnu \
             -Z build-std
+        shell: bash
 
       # 5. 重命名产物
       - name: Rename artifact
@@ -153,6 +160,7 @@ jobs:
           mkdir -p dist
           cp target/aarch64-pc-windows-gnu/release/msl-cli.exe \
              dist/msl-cli-aarch64-pc-windows-gnu.exe
+        shell: bash
 
       # 6. 上传产物
       - name: Upload artifact
