@@ -126,9 +126,9 @@ jobs:
         run: |
           git clone https://github.com/mstorsjo/llvm-mingw.git
           cd llvm-mingw
-          ./build-all.sh
-          echo "$PWD/bin" >> $GITHUB_PATH
-          $GITHUB_PATH/aarch64-w64-mingw32-gcc --version
+          ./build-all.sh $HOME/llvm-mingw-aarch64
+          echo "$HOME/llvm-mingw-aarch64/bin" >> $GITHUB_PATH
+          $HOME/llvm-mingw-aarch64/bin/aarch64-w64-mingw32-gcc --version
 
       # 3. 安装 Rust nightly + ARM64 GNU 目标
       - name: Install Rust nightly + target
