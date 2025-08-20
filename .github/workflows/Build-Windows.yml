@@ -136,7 +136,7 @@ jobs:
       # 3. 下载并安装社区版 ARM64 GNU 工具链（llvm-mingw）
       - name: Setup mingw-woarm64-build toolchain
         run: |
-          git clone https://github.com/mstorsjo/llvm-mingw.git
+          git lfs clone https://github.com/mstorsjo/llvm-mingw.git
           cd llvm-mingw
           ./build-all.sh $HOME/llvm-mingw-aarch64
           echo "$HOME/llvm-mingw-aarch64/bin" >> $GITHUB_PATH
