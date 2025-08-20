@@ -114,7 +114,7 @@ jobs:
 
   build-aarch64-windows-gnu:
     name: Windows GNU (ARM64)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       # 1. 拉取源码
