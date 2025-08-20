@@ -22,7 +22,7 @@ jobs:
         uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          paths:
+          path: |
             - $HOME/.cargo/registry
             - $HOME/.cargo/git
             - $HOME/.rustup
@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          paths:
+          path: |
             - $HOME/.cargo/registry
             - $HOME/.cargo/git
             - $HOME/.rustup
