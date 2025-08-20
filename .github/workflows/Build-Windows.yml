@@ -121,18 +121,19 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 2. 安装并配置 Rust 环境
+      # 2. 安装并配置 Rust 环境（nightly + rust-src）
       - name: Set up Rust toolchain
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           source $HOME/.cargo/env
-          rustup update nightly
+          rustup install nightly
           rustup default nightly
-          rustup component add rust-src rustfmt clippy
-          rustup target add aarch64-pc-windows-gnu
+          rustup component add rust-src rustfmt clippy --toolchain nightly
+          # 即使 target 不存在也不中断，build-std 会自行编译
+          rustup target add aarch64-pc-windows-gnu --toolchain nightly || true
         shell: bash
 
-      # 3. 下载并安装社区版 ARM64 GNU 工具链
+      # 3. 下载并安装社区版 ARM64 GNU 工具链（llvm-mingw）
       - name: Setup mingw-woarm64-build toolchain
         run: |
           git clone https://github.com/mstorsjo/llvm-mingw.git
@@ -145,9 +146,10 @@ jobs:
       # 4. 构建 std + release
       - name: Build (nightly + build-std)
         env:
-          CCaarch64pcwindowsgnu: aarch64-w64-mingw32-gcc
-          CXXaarch64pcwindowsgnu: aarch64-w64-mingw32-g++
+          CC_aarch64_pc_windows_gnu: aarch64-w64-mingw32-gcc
+          CXX_aarch64_pc_windows_gnu: aarch64-w64-mingw32-g++
         run: |
+          source $HOME/.cargo/env
           cargo +nightly build \
             --release \
             --target aarch64-pc-windows-gnu \
