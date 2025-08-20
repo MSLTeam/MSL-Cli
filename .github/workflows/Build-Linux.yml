@@ -93,8 +93,7 @@ jobs:
     name: Linux GNU (aarch64)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
@@ -105,13 +104,10 @@ jobs:
             - $HOME/.cargo/git
             - $HOME/.rustup
 
-      # ← 新增：安装 aarch64 glibc 交叉编译器
-      - name: Install glibc cross compiler
+      - name: Install aarch64 glibc cross compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
       - name: Install Rust (stable)
         uses: actions-rs/toolchain@v1
@@ -122,12 +118,11 @@ jobs:
       - name: Add aarch64-unknown-linux-gnu target
         run: rustup target add aarch64-unknown-linux-gnu
 
-      # ← 新增：CC/CXX 环境变量指向交叉编译器
       - name: Build (release)
         env:
-          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
-          CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
-        run: cargo build --release --target aarch64-unknown-linux-gnu
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        run: |
+          cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: Rename artifact
         run: |
@@ -141,12 +136,12 @@ jobs:
           name: msl-cli-aarch64-unknown-linux-gnu
           path: dist/msl-cli-aarch64-unknown-linux-gnu
 
+
   build-linux-musl-aarch64:
     name: Linux MUSL (aarch64)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
@@ -157,14 +152,11 @@ jobs:
             - $HOME/.cargo/git
             - $HOME/.rustup
 
-      # ← 新增：构建并安装 aarch64-musl 交叉编译器
-      - name: Build musl-cross for aarch64
+      - name: Build & install musl-cross for aarch64
         run: |
           git clone https://github.com/richfelker/musl-cross-make.git
           cd musl-cross-make
-          make TARGET=aarch64-linux-musl \
-               PREFIX=$HOME/aarch64-musl-cross
-          make install PREFIX=$HOME/aarch64-musl-cross
+          make TARGET=aarch64-linux-musl PREFIX=$HOME/aarch64-musl-cross install
           echo "$HOME/aarch64-musl-cross/bin" >> $GITHUB_PATH
 
       - name: Install Rust (stable)
@@ -176,12 +168,11 @@ jobs:
       - name: Add aarch64-unknown-linux-musl target
         run: rustup target add aarch64-unknown-linux-musl
 
-      # ← 新增：CC/CXX 环境变量指向 musl cross 编译器
       - name: Build (static musl)
         env:
-          CC_aarch64_unknown_linux_musl: aarch64-linux-musl-gcc
-          CXX_aarch64_unknown_linux_musl: aarch64-linux-musl-g++
-        run: cargo build --release --target aarch64-unknown-linux-musl
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-musl-gcc
+        run: |
+          cargo build --release --target aarch64-unknown-linux-musl
 
       - name: Rename artifact
         run: |
