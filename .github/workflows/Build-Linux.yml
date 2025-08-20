@@ -138,50 +138,60 @@ jobs:
 
 
   build-linux-musl-aarch64:
-    name: Linux MUSL (aarch64)
+    name: Linux MUSL (aarch64) via Zig
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # 1. Checkout
+      - name: Checkout source
+        uses: actions/checkout@v4
 
+      # 2. Install Zig (包含 cc/c++/ar/rustccalike)
+      - name: Install Zig
+        run: |
+          ZIG_VERSION=0.13.0
+          curl -sSL "https://ziglang.org/builds/zig-linux-x86_64-$ZIG_VERSION.tar.xz" \
+            | tar xJf -
+          echo "$PWD/zig-linux-x86_64-$ZIG_VERSION/zig" >> $GITHUB_PATH
+        shell: bash
+
+      # 3. Cache Cargo & rustup
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
-            - $HOME/.cargo/registry
-            - $HOME/.cargo/git
-            - $HOME/.rustup
+            $HOME/.cargo/registry
+            $HOME/.cargo/git
+            $HOME/.rustup
 
-      - name: Build & install musl-cross for aarch64
-        run: |
-          git clone https://github.com/richfelker/musl-cross-make.git
-          cd musl-cross-make
-          make TARGET=aarch64-linux-musl PREFIX=$HOME/aarch64-musl-cross install
-          echo "$HOME/aarch64-musl-cross/bin" >> $GITHUB_PATH
-
-      - name: Install Rust (stable)
+      # 4. Install Rust & add MUSL target
+      - name: Install Rust (stable) & add target
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-
       - name: Add aarch64-unknown-linux-musl target
         run: rustup target add aarch64-unknown-linux-musl
 
-      - name: Build (static musl)
+      # 5. Build with Zig as linker
+      - name: Build (static musl via Zig)
         env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-musl-gcc
-        run: |
-          cargo build --release --target aarch64-unknown-linux-musl
+          # 通知 Cargo 在链接阶段使用 zig cc
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: zig cc
+          # ring/openssl-sys 等 C 库编译时也会用 zig cc
+          CC: zig cc
+        run: cargo build --release --target aarch64-unknown-linux-musl
+        shell: bash
 
-      - name: Rename artifact
+      # 6. 收集产物
+      - name: Rename & upload artifact
         run: |
           mkdir -p dist
           cp target/aarch64-unknown-linux-musl/release/msl-cli \
              dist/msl-cli-aarch64-unknown-linux-musl
-
+        shell: bash
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-aarch64-unknown-linux-musl
-          path: dist/msl-cli-aarch64-unknown-linux-musl
+          path: 
