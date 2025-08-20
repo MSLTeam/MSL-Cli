@@ -88,3 +88,84 @@ jobs:
         with:
           name: msl-cli-x86_64-unknown-linux-musl
           path: dist/msl-cli-x86_64-unknown-linux-musl
+
+  build-linux-gnu-aarch64:
+    name: Linux GNU (aarch64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Cache Rust toolchain & Cargo registry
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            - $HOME/.cargo/registry
+            - $HOME/.cargo/git
+            - $HOME/.rustup
+
+      - name: Install Rust (stable)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install Rust target
+        run: rustup target add aarch64-unknown-linux-gnu
+
+      - name: Build (release)
+        run: cargo build --release --target aarch64-unknown-linux-gnu
+
+      - name: Rename artifact
+        run: |
+          mkdir -p dist
+          cp target/aarch64-unknown-linux-gnu/release/msl-cli \
+             dist/msl-cli-aarch64-unknown-linux-gnu
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-aarch64-unknown-linux-gnu
+          path: dist/msl-cli-aarch64-unknown-linux-gnu
+
+  build-linux-musl-aarch64:
+    name: Linux MUSL (aarch64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Cache Rust toolchain & Cargo registry
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            - $HOME/.cargo/registry
+            - $HOME/.cargo/git
+            - $HOME/.rustup
+
+      - name: Install musl toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Install Rust target
+        run: rustup target add aarch64-unknown-linux-musl
+
+      - name: Build (static musl)
+        env:
+          CC: aarch64-linux-musl-gcc
+        run: cargo build --release --target aarch64-unknown-linux-musl
+
+      - name: Rename artifact
+        run: |
+          mkdir -p dist
+          cp target/aarch64-unknown-linux-musl/release/msl-cli \
+             dist/msl-cli-aarch64-unknown-linux-musl
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-aarch64-unknown-linux-musl
+          path: dist/msl-cli-aarch64-unknown-linux-musl
