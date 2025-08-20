@@ -145,15 +145,14 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 2. Install Zig (包含 cc/c++/ar/rustccalike)
       - name: Install Zig
         run: |
-          ZIG_VERSION=0.13.0
-          curl -sSL "https://ziglang.org/builds/zig-linux-x86_64-$ZIG_VERSION.tar.xz" \
+          ZIG_VERSION=0.14.1
+          curl -sSL "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz" \
             | tar xJf -
-          echo "$PWD/zig-linux-x86_64-$ZIG_VERSION/zig" >> $GITHUB_PATH
+          echo "$PWD/zig-linux-x86_64-${ZIG_VERSION}/zig" >> $GITHUB_PATH
         shell: bash
-
+    
       # 3. Cache Cargo & rustup
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
@@ -194,4 +193,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-aarch64-unknown-linux-musl
-          path: 
+          path: dist/msl-cli-aarch64-unknown-linux-musl
