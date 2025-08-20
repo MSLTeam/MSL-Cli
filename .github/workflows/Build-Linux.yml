@@ -21,11 +21,11 @@ jobs:
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
         with:
-          path:
-            - ~/.cargo/registry
-            - ~/.cargo/git
-            - ~/.rustup
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          paths:
+            - $HOME/.cargo/registry
+            - $HOME/.cargo/git
+            - $HOME/.rustup
 
       - name: Install Rust (stable)
         uses: actions-rs/toolchain@v1
@@ -58,11 +58,11 @@ jobs:
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
         with:
-          path:
-            - ~/.cargo/registry
-            - ~/.cargo/git
-            - ~/.rustup
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          paths:
+            - $HOME/.cargo/registry
+            - $HOME/.cargo/git
+            - $HOME/.rustup
 
       - name: Install musl toolchain
         run: |
