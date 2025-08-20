@@ -148,7 +148,9 @@ jobs:
       - name: Install Zig
         run: |
           ZIG_VERSION=0.14.1
-          curl -sSL "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz" \
+          ARCHIVE="zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+          curl -sSL \
+          "https://github.com/ziglang/zig/releases/download/${ZIG_VERSION}/${ARCHIVE}" \
             | tar xJf -
           echo "$PWD/zig-linux-x86_64-${ZIG_VERSION}/zig" >> $GITHUB_PATH
         shell: bash
