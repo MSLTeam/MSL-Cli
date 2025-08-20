@@ -111,65 +111,6 @@ jobs:
         with:
           name: msl-cli-aarch64-pc-windows-msvc
           path: target/aarch64-pc-windows-msvc/release/msl-cli-aarch64-pc-windows-msvc.exe
-
-  build-aarch64-windows-gnu:
-    name: Windows GNU (ARM64)
-    runs-on: ubuntu-latest
-
-    steps:
-      # 1. 拉取源码
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      # 2. 安装并配置 Rust 环境（nightly + rust-src）
-      - name: Set up Rust toolchain
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          source $HOME/.cargo/env
-          rustup install nightly
-          rustup default nightly
-          rustup component add rust-src rustfmt clippy --toolchain nightly
-          # 即使 target 不存在也不中断，build-std 会自行编译
-          rustup target add aarch64-pc-windows-gnu --toolchain nightly || true
-        shell: bash
-
-      # 3. 下载并安装社区版 ARM64 GNU 工具链（llvm-mingw）
-      - name: Setup mingw-woarm64-build toolchain
-        run: |
-          git lfs clone https://github.com/mstorsjo/llvm-mingw.git
-          cd llvm-mingw
-          ./build-all.sh $HOME/llvm-mingw-aarch64
-          echo "$HOME/llvm-mingw-aarch64/bin" >> $GITHUB_PATH
-          $HOME/llvm-mingw-aarch64/bin/aarch64-w64-mingw32-gcc --version
-        shell: bash
-
-      # 4. 构建 std + release
-      - name: Build (nightly + build-std)
-        env:
-          CC_aarch64_pc_windows_gnu: aarch64-w64-mingw32-gcc
-          CXX_aarch64_pc_windows_gnu: aarch64-w64-mingw32-g++
-        run: |
-          source $HOME/.cargo/env
-          cargo +nightly build \
-            --release \
-            --target aarch64-pc-windows-gnu \
-            -Z build-std
-        shell: bash
-
-      # 5. 重命名产物
-      - name: Rename artifact
-        run: |
-          mkdir -p dist
-          cp target/aarch64-pc-windows-gnu/release/msl-cli.exe \
-             dist/msl-cli-aarch64-pc-windows-gnu.exe
-        shell: bash
-
-      # 6. 上传产物
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: msl-cli-aarch64-pc-windows-gnu
-          path: dist/*.exe
           
   windows-i686-msvc:
     name: Windows MSVC (i686)
