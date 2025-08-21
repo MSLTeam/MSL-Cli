@@ -144,7 +144,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install Zig (one-step tar.xz extraction)
+      - name: Install Zig
         shell: bash
         run: |
           set -euxo pipefail
@@ -153,9 +153,12 @@ jobs:
           mkdir zig-dist
           tar -xJf zig.tar.xz -C zig-dist --strip-components=1
           echo "$PWD/zig-dist" >> $GITHUB_PATH
+
+      - name: Confirm Zig installation
+        run: |
           which zig
           zig version
-    
+
       # 3. Cache Cargo & rustup
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
