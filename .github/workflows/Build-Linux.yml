@@ -136,7 +136,6 @@ jobs:
           name: msl-cli-aarch64-unknown-linux-gnu
           path: dist/msl-cli-aarch64-unknown-linux-gnu
 
-
   build-linux-musl-aarch64:
     name: Linux MUSL (aarch64) via Zig
     runs-on: ubuntu-latest
@@ -145,18 +144,15 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install Zig (nested tar fixed)
+      - name: Install Zig (one-step tar.xz extraction)
         shell: bash
         run: |
           set -euxo pipefail
           ZIG_URL="https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz"
           curl -sSL "$ZIG_URL" -o zig.tar.xz
-          unxz zig.tar.xz
-          TARFILE=$(ls zig-*.tar | head -n1)
           mkdir zig-dist
-          tar -xf "$TARFILE" -C zig-dist
-          ZIG_DIR=$(find zig-dist -maxdepth 1 -type d | head -n1)
-          echo "$PWD/$ZIG_DIR" >> $GITHUB_PATH
+          tar -xJf zig.tar.xz -C zig-dist --strip-components=1
+          echo "$PWD/zig-dist" >> $GITHUB_PATH
           which zig
           zig version
     
