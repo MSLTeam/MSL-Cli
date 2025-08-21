@@ -149,26 +149,14 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-
-          # 1. 下载你的 Zig 包
-          ZIGURL="https://ziglang.org/builds/zig-x8664-linux-0.15.0-dev.1593+399bace2f.tar.xz"
+          ZIG_URL="https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz"
           curl -sSL "$ZIG_URL" -o zig.tar.xz
-
-          # 2. 第一次解压 .tar.xz，得到一个 .tar 文件
-          unxz zig.tar.xz   # 解压出 zig-*.tar
+          unxz zig.tar.xz
           TARFILE=$(ls zig-*.tar | head -n1)
-
-          # 3. 第二次解压 .tar，得到最终目录
           mkdir zig-dist
-          tar -f "$TARFILE" -x -C zig-dist
-
-          # 4. 找到真正的 Zig 目录（例如 zig-x86_64-linux-0.15.0-dev.1593+399bace2f）
+          tar -xf "$TARFILE" -C zig-dist
           ZIG_DIR=$(find zig-dist -maxdepth 1 -type d | head -n1)
-
-          # 5. 把该目录加入 PATH
-          echo "$PWD/$ZIGDIR" >> $GITHUBPATH
-
-          # 验证安装
+          echo "$PWD/$ZIG_DIR" >> $GITHUB_PATH
           which zig
           zig version
     
