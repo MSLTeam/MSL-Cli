@@ -136,105 +136,90 @@ jobs:
           name: msl-cli-aarch64-unknown-linux-gnu
           path: dist/msl-cli-aarch64-unknown-linux-gnu
 
-  build-linux-musl-aarch64:
-    name: Linux MUSL (aarch64) via Zig
-    runs-on: ubuntu-latest
+build-linux-musl-aarch64:
+  name: Linux MUSL (aarch64) via Zig
+  runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+  steps:
+    - uses: actions/checkout@v4
 
-      - name: 缓存 Zig 与 wrappers
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-zig-0.15.0-dev.1593+399bace2f
-          path: |
-            zig-dist
-            zig-wrap
+    - name: 缓存 Zig 与 wrappers
+      uses: actions/cache@v4
+      with:
+        key: ${{ runner.os }}-zig-0.15.0-dev.1593+399bace2f
+        path: |
+          zig-dist
+          zig-wrap
 
-      - name: 安装 Zig 并生成智能 wrapper
-        shell: bash
-        run: |
-          set -euxo pipefail
+    - name: 安装 Zig 并生成智能 wrapper
+      shell: bash
+      run: |
+        set -euxo pipefail
+        # 下载 & 解压 Zig
+        curl -sSL "https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz" \
+          -o zig.tar.xz
+        mkdir zig-dist
+        tar -xJf zig.tar.xz -C zig-dist --strip-components=1
 
-          # 下载 & 解压 Zig
-          curl -sSL "https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz" \
-            -o zig.tar.xz
-          mkdir zig-dist
-          tar -xJf zig.tar.xz -C zig-dist --strip-components=1
+        # 生成专用 linker wrapper
+        mkdir zig-wrap
+        cat > zig-wrap/aarch64-linux-musl-cc << 'EOF'
+        #!/usr/bin/env bash
+        set -euxo pipefail
+        exec "$(dirname "$0")/../zig-dist/zig" cc --target aarch64-linux-musl "$@"
+        EOF
 
-          # 生成 wrapper 目录
-          mkdir zig-wrap
+        # 生成 ar / ranlib wrapper
+        cat > zig-wrap/zig-ar << 'EOF'
+        #!/usr/bin/env bash
+        set -euxo pipefail
+        exec "$(dirname "$0")/../zig-dist/zig" ar "$@"
+        EOF
+        cat > zig-wrap/zig-ranlib << 'EOF'
+        #!/usr/bin/env bash
+        set -euxo pipefail
+        exec "$(dirname "$0")/../zig-dist/zig" ranlib "$@"
+        EOF
 
-          # zig-cc：把 Rust triple 转换给 Zig
-          cat > zig-wrap/zig-cc << 'EOF'
-          #!/usr/bin/env bash
-          set -euxo pipefail
-          # 遍历所有参数，把 aarch64-unknown-linux-musl 映射到 aarch64-linux-musl
-          args=()
-          for a in "$@"; do
-            if [[ "$a" == --target=aarch64-unknown-linux-musl ]]; then
-              args+=(--target=aarch64-linux-musl)
-            else
-              args+=("$a")
-            fi
-          done
-          exec "$(dirname "$0")/../zig-dist/zig" cc "${args[@]}"
-          EOF
+        chmod +x zig-wrap/*
+        echo "$PWD/zig-dist" >> $GITHUB_PATH
+        echo "$PWD/zig-wrap" >> $GITHUB_PATH
 
-          # zig-ar / zig-ranlib：按需调用
-          cat > zig-wrap/zig-ar << 'EOF'
-          #!/usr/bin/env bash
-          set -euxo pipefail
-          exec "$(dirname "$0")/../zig-dist/zig" ar "$@"
-          EOF
+    - name: 缓存 Rust & Cargo
+      uses: actions/cache@v4
+      with:
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        path: |
+          $HOME/.cargo/registry
+          $HOME/.cargo/git
+          $HOME/.rustup
 
-          cat > zig-wrap/zig-ranlib << 'EOF'
-          #!/usr/bin/env bash
-          set -euxo pipefail
-          exec "$(dirname "$0")/../zig-dist/zig" ranlib "$@"
-          EOF
+    - name: 安装 Rust & 添加 MUSL target
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
 
-          chmod +x zig-wrap/*
+    - run: rustup target add aarch64-unknown-linux-musl
 
-          # 添加到 PATH
-          echo "$PWD/zig-dist" >> $GITHUB_PATH
-          echo "$PWD/zig-wrap" >> $GITHUB_PATH
+    - name: 构建 (static musl via Zig)
+      shell: bash
+      env:
+        CC_aarch64_unknown_linux_musl: aarch64-linux-musl-cc
+        AR_aarch64_unknown_linux_musl: zig-ar
+        RANLIB_aarch64_unknown_linux_musl: zig-ranlib
+        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-musl-cc
+        OPENSSL_STATIC: 1
+      run: cargo build --release --target aarch64-unknown-linux-musl
 
-      - name: 缓存 Rust & Cargo
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          path: |
-            $HOME/.cargo/registry
-            $HOME/.cargo/git
-            $HOME/.rustup
+    - name: 重命名 & 上传产物
+      shell: bash
+      run: |
+        mkdir -p dist
+        cp target/aarch64-unknown-linux-musl/release/msl-cli \
+           dist/msl-cli-aarch64-unknown-linux-musl
 
-      - name: 安装 Rust & 添加 MUSL target
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - run: rustup target add aarch64-unknown-linux-musl
-
-      - name: 构建 (static musl via Zig)
-        shell: bash
-        env:
-          CC_aarch64_unknown_linux_musl: zig-cc
-          AR_aarch64_unknown_linux_musl: zig-ar
-          RANLIB_aarch64_unknown_linux_musl: zig-ranlib
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: zig-cc
-          OPENSSL_STATIC: 1
-        run: cargo build --release --target aarch64-unknown-linux-musl
-
-      - name: 重命名 & 上传产物
-        shell: bash
-        run: |
-          mkdir -p dist
-          cp target/aarch64-unknown-linux-musl/release/msl-cli \
-             dist/msl-cli-aarch64-unknown-linux-musl
-      - uses: actions/upload-artifact@v4
-        with:
-          name: msl-cli-aarch64-unknown-linux-musl
-          path: dist/msl-cli-aarch64-unknown-linux-musl
-
+    - uses: actions/upload-artifact@v4
+      with:
+        name: msl-cli-aarch64-unknown-linux-musl
+        path: dist/msl-cli-aarch64-unknown-linux-musl
