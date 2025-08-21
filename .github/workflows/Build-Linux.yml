@@ -166,7 +166,20 @@ jobs:
           cat > zig-wrap/aarch64-linux-musl-cc << 'EOF'
           #!/usr/bin/env bash
           set -euxo pipefail
-          exec "$(dirname "$0")/../zig-dist/zig" cc -target aarch64-linux-musl "$@"
+
+          # 1. 过滤掉任何 --target 或 -target 参数
+          args=()
+          for a in "$@"; do
+            case "$a" in
+              --target=*|-target) ;;
+              *) args+=("$a") ;;
+            esac
+          done
+
+          # 2. 永远只注入 Zig 认识的 Musl triple
+          exec "$(dirname "$0")/../zig-dist/zig" cc \
+            -target aarch64-linux-musl \
+            "${args[@]}"
           EOF
 
           # 生成 ar / ranlib wrapper
