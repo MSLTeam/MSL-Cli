@@ -139,21 +139,10 @@ jobs:
   build-linux-musl-aarch64:
     name: Linux MUSL (aarch64) via Zig
     runs-on: ubuntu-latest
-    env:
-      # Zig 版本及下载地址
-      ZIG_VERSION: "0.15.0-dev.1593+399bace2f"
-      ZIG_URL:     "https://ziglang.org/builds/zig-x86_64-linux-${{ env.ZIG_VERSION }}.tar.xz"
+    
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-
-      - name: 缓存 Zig dist & wrappers
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-zig-${{ env.ZIG_VERSION }}
-          path: |
-            zig-dist
-            zig-wrap
 
       - name: 安装 Zig 并生成 C/AR/RANLIB wrappers
         shell: bash
@@ -161,7 +150,7 @@ jobs:
           set -euxo pipefail
 
           # 下载 & 解压
-          curl -sSL "$ZIG_URL" -o zig.tar.xz
+          curl -sSL https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz -o zig.tar.xz
           mkdir zig-dist
           tar -xJf zig.tar.xz -C zig-dist --strip-components=1
 
