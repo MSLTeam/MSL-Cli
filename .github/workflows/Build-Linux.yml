@@ -203,10 +203,10 @@ jobs:
       - name: Build (static musl via Zig)
         shell: bash
         env:
-          CC_aarch64_unknown_linux_musl: "zig cc"
-          AR_aarch64_unknown_linux_musl: "zig ar" 
+          CC_aarch64_unknown_linux_musl: "zig cc -target aarch64-linux-musl"
+          AR_aarch64_unknown_linux_musl: "zig ar"
           RANLIB_aarch64_unknown_linux_musl: "zig ranlib"
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: "zig cc"
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: "zig cc -target aarch64-linux-musl"
           OPENSSL_STATIC: "1"
         run: cargo build --release --target aarch64-unknown-linux-musl
 
