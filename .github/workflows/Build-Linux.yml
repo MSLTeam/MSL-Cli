@@ -166,7 +166,7 @@ jobs:
           cat > zig-wrap/aarch64-linux-musl-cc << 'EOF'
           #!/usr/bin/env bash
           set -euxo pipefail
-          exec "$(dirname "$0")/../zig-dist/zig" cc --target aarch64-linux-musl "$@"
+          exec "$(dirname "$0")/../zig-dist/zig" cc -target aarch64-linux-musl "$@"
           EOF
 
           # 生成 ar / ranlib wrapper
