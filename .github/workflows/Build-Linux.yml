@@ -147,10 +147,19 @@ jobs:
 
       - name: Install Zig
         run: |
-          curl -sSL \
-          https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz \
-            | tar xJf -
-          echo "$PWD/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar/zig" >> $GITHUB_PATH
+          curl -sSL https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz 
+          # 2. 解压出中间的 .tar 文件
+          tar xJf zig.tar.xz
+          # 3. 找到刚解压出的 .tar 文件名（假设唯一）
+          NESTED_TAR=$(ls *.tar | head -n1)
+          # 4. 再次解压，得到最终目录
+          tar xf "$NESTED_TAR"
+          # 5. 抽顶层目录名
+          ZIG_DIR=$(tar tf "$NESTED_TAR" | head -n1 | cut -d/ -f1)
+          # 6. 把真正的 Zig 安装目录加入 PATH
+          echo "$PWD/$ZIG_DIR" >> $GITHUB_PATH
+          # 验证安装
+          zig version
         shell: bash
     
       # 3. Cache Cargo & rustup
