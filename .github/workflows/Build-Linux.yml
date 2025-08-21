@@ -178,12 +178,11 @@ jobs:
           done
 
           # 2. 使用 Rust 自带的 MUSL sysroot，避免重复注入 Zig 内置的 crt1.o
-          SYSROOT="$(rustc --print sysroot)/lib/rustlib/aarch64-unknown-linux-musl/lib/self-contained"
+          LIBDIR="$(rustc --print sysroot)/lib/rustlib/aarch64-unknown-linux-musl/lib"
 
-          # 3. 最终调用 Zig cc 并注入正确的 Musl triple
           exec "$(dirname "$0")/../zig-dist/zig" cc \
-            --sysroot "$SYSROOT" \
             -target aarch64-linux-musl \
+            -L"$LIBDIR" \
             "${args[@]}"
           EOF
 
