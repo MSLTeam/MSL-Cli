@@ -23,9 +23,9 @@ jobs:
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
-            - $HOME/.cargo/registry
-            - $HOME/.cargo/git
-            - $HOME/.rustup
+            $HOME/.cargo/registry
+            $HOME/.cargo/git
+            $HOME/.rustup
 
       - name: Install Rust (stable)
         uses: actions-rs/toolchain@v1
@@ -60,9 +60,9 @@ jobs:
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
-            - $HOME/.cargo/registry
-            - $HOME/.cargo/git
-            - $HOME/.rustup
+            $HOME/.cargo/registry
+            $HOME/.cargo/git
+            $HOME/.rustup
 
       - name: Install musl toolchain
         run: |
@@ -93,16 +93,17 @@ jobs:
     name: Linux GNU (aarch64)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           path: |
-            - $HOME/.cargo/registry
-            - $HOME/.cargo/git
-            - $HOME/.rustup
+            $HOME/.cargo/registry
+            $HOME/.cargo/git
+            $HOME/.rustup
 
       - name: Install aarch64 glibc cross compiler
         run: |
@@ -121,8 +122,7 @@ jobs:
       - name: Build (release)
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-        run: |
-          cargo build --release --target aarch64-unknown-linux-gnu
+        run: cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: Rename artifact
         run: |
@@ -139,27 +139,61 @@ jobs:
   build-linux-musl-aarch64:
     name: Linux MUSL (aarch64) via Zig
     runs-on: ubuntu-latest
+    env:
+      # Zig 版本及下载地址
+      ZIG_VERSION: "0.15.0-dev.1593+399bace2f"
+      ZIG_URL:     "https://ziglang.org/builds/zig-x86_64-linux-${{ env.ZIG_VERSION }}.tar.xz"
+
     steps:
-      # 1. Checkout
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install Zig
+      - name: 缓存 Zig dist & wrappers
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-zig-${{ env.ZIG_VERSION }}
+          path: |
+            zig-dist
+            zig-wrap
+
+      - name: 安装 Zig 并生成 C/AR/RANLIB wrappers
         shell: bash
         run: |
           set -euxo pipefail
-          ZIG_URL="https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz"
+
+          # 下载 & 解压
           curl -sSL "$ZIG_URL" -o zig.tar.xz
           mkdir zig-dist
           tar -xJf zig.tar.xz -C zig-dist --strip-components=1
+
+          # 生成 wrapper 脚本
+          mkdir zig-wrap
+
+          cat > zig-wrap/zig-cc << 'EOF'
+          #!/usr/bin/env bash
+          set -euxo pipefail
+          exec "$(dirname "$0")/../zig-dist/zig" cc \
+            --target=aarch64-linux-musl "$@"
+          EOF
+
+          cat > zig-wrap/zig-ar << 'EOF'
+          #!/usr/bin/env bash
+          set -euxo pipefail
+          exec "$(dirname "$0")/../zig-dist/zig" ar "$@"
+          EOF
+
+          cat > zig-wrap/zig-ranlib << 'EOF'
+          #!/usr/bin/env bash
+          set -euxo pipefail
+          exec "$(dirname "$0")/../zig-dist/zig" ranlib "$@"
+          EOF
+
+          chmod +x zig-wrap/*
+
+          # 将 dist 与 wrap 目录加入后续步骤 PATH
           echo "$PWD/zig-dist" >> $GITHUB_PATH
+          echo "$PWD/zig-wrap" >> $GITHUB_PATH
 
-      - name: Confirm Zig installation
-        run: |
-          which zig
-          zig version
-
-      # 3. Cache Cargo & rustup
       - name: Cache Rust toolchain & Cargo registry
         uses: actions/cache@v4
         with:
@@ -169,36 +203,32 @@ jobs:
             $HOME/.cargo/git
             $HOME/.rustup
 
-      # 4. Install Rust & add MUSL target
-      - name: Install Rust (stable) & add target
+      - name: Install Rust (stable) & 添加 MUSL 目标
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
+
       - name: Add aarch64-unknown-linux-musl target
         run: rustup target add aarch64-unknown-linux-musl
 
-      # 5. Build with Zig as linker
       - name: Build (static musl via Zig)
+        shell: bash
         env:
-          # 通知 Cargo 在链接阶段使用 zig cc
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: zig cc
-          # ring/openssl-sys 等 C 库编译时也会用 zig cc
-          CC_aarch64_unknown_linux_musl: zig cc
-          CXX_aarch64_unknown_linux_musl: zig c++
-          AR_aarch64_unknown_linux_musl: zig ar
-          RANLIB_aarch64_unknown_linux_musl: zig ranlib
+          CC: zig-cc
+          AR: zig-ar
+          RANLIB: zig-ranlib
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: zig-cc
           OPENSSL_STATIC: 1
         run: cargo build --release --target aarch64-unknown-linux-musl
-        shell: bash
 
-      # 6. 收集产物
       - name: Rename & upload artifact
+        shell: bash
         run: |
           mkdir -p dist
           cp target/aarch64-unknown-linux-musl/release/msl-cli \
              dist/msl-cli-aarch64-unknown-linux-musl
-        shell: bash
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
