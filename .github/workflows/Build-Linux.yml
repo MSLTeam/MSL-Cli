@@ -176,11 +176,11 @@ jobs:
             esac
           done
 
-          # 2. 永远只注入 Zig 认识的 Musl triple
+          SYSROOT="$(rustc --print sysroot)/lib/rustlib/aarch64-unknown-linux-musl/lib/self-contained"
           exec "$(dirname "$0")/../zig-dist/zig" cc \
+            --sysroot "$SYSROOT" \
             -target aarch64-linux-musl \
-            "${args[@]}"
-          EOF
+          "$@"
 
           # 生成 ar / ranlib wrapper
           cat > zig-wrap/zig-ar << 'EOF'
