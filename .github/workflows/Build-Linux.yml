@@ -124,15 +124,30 @@ jobs:
             $HOME/.cargo/git
             $HOME/.rustup
 
-      - name: Install aarch64 glibc cross compiler & OpenSSL dev
+      - name: Install aarch64 glibc cross compiler
         run: |
-          sudo dpkg --add-architecture arm64
           sudo apt-get update
           sudo apt-get install -y \
             gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu \
-            libssl-dev:arm64 \
-            pkg-config
+            g++-aarch64-linux-gnu
+
+      - name: Download and build OpenSSL for aarch64-gnu
+        shell: bash
+        run: |
+          set -euxo pipefail
+          OPENSSL_VERSION=1.1.1w
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" \
+            -o openssl.tar.gz
+          tar -xzf openssl.tar.gz
+          cd openssl-${OPENSSL_VERSION}
+          sed -i 's|#include <linux/version.h>|#include <sys/utsname.h>|' engines/e_afalg.c
+          export CC=aarch64-linux-gnu-gcc
+          export AR=ar
+          export RANLIB=ranlib
+          ./Configure linux-aarch64 no-shared no-tests no-afalgeng \
+            --prefix="$PWD/../openssl-install"
+          make -j"$(nproc)" build_libs
+          make install_sw
 
       - name: Install Rust (stable)
         uses: actions-rs/toolchain@v1
@@ -146,9 +161,9 @@ jobs:
       - name: Build (release)
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-          OPENSSL_DIR: /usr
-          OPENSSL_LIB_DIR: /usr/lib/aarch64-linux-gnu
-          OPENSSL_INCLUDE_DIR: /usr/include/aarch64-linux-gnu
+          OPENSSL_DIR: ${{ github.workspace }}/openssl-install
+          OPENSSL_LIB_DIR: ${{ github.workspace }}/openssl-install/lib
+          OPENSSL_INCLUDE_DIR: ${{ github.workspace }}/openssl-install/include
         run: cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: Rename artifact
