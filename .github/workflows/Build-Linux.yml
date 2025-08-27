@@ -67,7 +67,7 @@ jobs:
       - name: Install musl toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools linux-libc-dev
+          sudo apt-get install -y musl-tools linux-libc-dev linux-headers-$(uname -r)
 
       - name: Install Rust target
         run: rustup target add x86_64-unknown-linux-musl
@@ -80,6 +80,7 @@ jobs:
           curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz
           tar -xzf openssl.tar.gz
           cd openssl-${OPENSSL_VERSION}
+          sed -i 's|#   include <linux/mman.h>|#   include <sys/mman.h>|' crypto/mem_sec.c
           export CC=musl-gcc
           export AR=ar
           export RANLIB=ranlib
