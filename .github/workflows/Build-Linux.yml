@@ -84,7 +84,7 @@ jobs:
           export CC=musl-gcc
           export AR=ar
           export RANLIB=ranlib
-          ./Configure linux-x86_64 no-shared no-tests --prefix="$PWD/../openssl-install"
+          ./Configure linux-x86_64 no-shared no-tests no-afalgeng --prefix="$PWD/../openssl-install"
           make -j"$(nproc)" build_libs
           make install_sw
 
