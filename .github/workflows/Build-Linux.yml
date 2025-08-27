@@ -72,9 +72,32 @@ jobs:
       - name: Install Rust target
         run: rustup target add x86_64-unknown-linux-musl
 
+      - name: Download and build OpenSSL for x86_64-musl
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          OPENSSL_VERSION=1.1.1w
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" \
+            -o openssl.tar.gz
+          tar -xzf openssl.tar.gz
+          cd openssl-${OPENSSL_VERSION}
+
+          export CC=musl-gcc
+          export AR=ar
+          export RANLIB=ranlib
+
+          ./Configure linux-x86_64 no-shared no-tests \
+            --prefix="$PWD/../openssl-install"
+          make -j"$(nproc)" build_libs
+          make install_sw
+
       - name: Build (static musl)
         env:
           CC: x86_64-linux-musl-gcc
+          OPENSSL_DIR: ${{ github.workspace }}/openssl-install
+          OPENSSL_LIB_DIR: ${{ github.workspace }}/openssl-install/lib
+          OPENSSL_INCLUDE_DIR: ${{ github.workspace }}/openssl-install/include
         run: cargo build --release --target x86_64-unknown-linux-musl
 
       - name: Rename artifact
