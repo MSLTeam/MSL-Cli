@@ -137,7 +137,7 @@ jobs:
           path: dist/msl-cli-aarch64-unknown-linux-gnu
 
   build-linux-musl-aarch64:
-    name: Linux MUSL (aarch64) via Zig
+    name: Linux MUSL (aarch64)
     runs-on: ubuntu-latest
 
     steps:
@@ -201,7 +201,7 @@ jobs:
           chmod +x zig-wrap/*
           echo "$PWD/zig-dist" >> $GITHUB_PATH
           echo "$PWD/zig-wrap" >> $GITHUB_PATH
-
+          
       - name: 构建 OpenSSL for aarch64-musl
         shell: bash
         run: |
@@ -212,15 +212,15 @@ jobs:
           tar -xzf openssl.tar.gz
           cd openssl-${OPENSSL_VERSION}
 
-          export CC=aarch64-linux-musl-cc
+          # 显式指定交叉编译器，避免 cross-compile-prefix 拼接
+          export CC="$PWD/../zig-wrap/aarch64-linux-musl-cc"
           export AR=zig-ar
           export RANLIB=zig-ranlib
 
           ./Configure linux-aarch64 no-shared no-tests \
-            --prefix="$PWD/../openssl-install" \
-            --cross-compile-prefix=aarch64-linux-musl-
-          make -j$(nproc) build_libs
-          make install_sw    
+            --prefix="$PWD/../openssl-install"
+          make -j"$(nproc)" build_libs
+          make install_sw   
 
       - name: 缓存 Rust & Cargo
         uses: actions/cache@v4
