@@ -155,39 +155,28 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-
-          # 下载 & 解压 Zig
           curl -sSL "https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz" \
             -o zig.tar.xz
           mkdir zig-dist
           tar -xJf zig.tar.xz -C zig-dist --strip-components=1
-
-          # 生成专用 linker wrapper
           mkdir -p zig-wrap
           cat > zig-wrap/aarch64-linux-musl-cc << 'EOF'
           #!/usr/bin/env bash
           set -euxo pipefail
-
-          # 1. 过滤掉任何 --target=... 或 -target=... 参数
           args=()
           for a in "$@"; do
             case "$a" in
-              --target=*|-target=*)    ;;  # 丢弃
-              *) args+=("$a")          ;;  # 保留其他
+              --target=*|-target=*)    ;;
+              *) args+=("$a")          ;;
             esac
           done
-
-          # 2. 使用 Rust 自带的 MUSL sysroot，避免重复注入 Zig 内置的 crt1.o
           LIBDIR="$(rustc --print sysroot)/lib/rustlib/aarch64-unknown-linux-musl/lib"
-
           exec "$(dirname "$0")/../zig-dist/zig" cc \
             -target aarch64-linux-musl \
             -fno-crt \
             -L"$LIBDIR" \
             "${args[@]}"
           EOF
-
-          # 生成 ar / ranlib wrapper
           cat > zig-wrap/zig-ar << 'EOF'
           #!/usr/bin/env bash
           set -euxo pipefail
@@ -198,7 +187,6 @@ jobs:
           set -euxo pipefail
           exec "$(dirname "$0")/../zig-dist/zig" ranlib "$@"
           EOF
-
           chmod +x zig-wrap/*
           echo "$PWD/zig-dist" >> $GITHUB_PATH
           echo "$PWD/zig-wrap" >> $GITHUB_PATH
