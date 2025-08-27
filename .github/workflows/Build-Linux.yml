@@ -296,11 +296,16 @@ jobs:
             $HOME/.cargo/git
             $HOME/.rustup
 
-      - name: Setup multilib & SSL dev for i386
+      - name: Setup multilib & OpenSSL dev for i386
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib g++-multilib libc6-dev:i386 libssl-dev:i386 pkg-config
+          sudo apt-get install -y \
+            gcc-multilib \
+            g++-multilib \
+            libc6-dev:i386 \
+            libssl-dev:i386 \
+            pkg-config
 
       - name: Install Rust (stable)
         uses: actions-rs/toolchain@v1
@@ -313,7 +318,8 @@ jobs:
 
       - name: Build (release)
         env:
-          CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER: "gcc -m32"
+          CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER: gcc
+          RUSTFLAGS: "-C link-arg=-m32"
           OPENSSL_DIR: /usr
           OPENSSL_LIB_DIR: /usr/lib/i386-linux-gnu
           OPENSSL_INCLUDE_DIR: /usr/include/i386-linux-gnu
@@ -323,13 +329,12 @@ jobs:
         run: |
           mkdir -p dist
           cp target/i686-unknown-linux-gnu/release/msl-cli \
-            dist/msl-cli-i686-unknown-linux-gnu
+             dist/msl-cli-i686-unknown-linux-gnu
 
       - uses: actions/upload-artifact@v4
         with:
           name: msl-cli-i686-unknown-linux-gnu
           path: dist/msl-cli-i686-unknown-linux-gnu
-
 
   build-linux-musl-i686:
     name: Linux MUSL (i686)
@@ -341,7 +346,8 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          curl -sSL "https://ziglang.org/builds/zig-x86_64-linux-0.15.0.tar.xz" -o zig.tar.xz
+          curl -sSL "https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz" \
+            -o zig.tar.xz
           mkdir zig-dist
           tar -xJf zig.tar.xz -C zig-dist --strip-components=1
           mkdir -p zig-wrap
@@ -349,7 +355,9 @@ jobs:
           #!/usr/bin/env bash
           set -euxo pipefail
           args=()
-          for a in "$@"; do case "$a" in --target=*|-target=*) ;; *) args+=("$a");; esac; done
+          for a in "$@"; do
+            case "$a" in --target=*|-target=*) ;; *) args+=("$a");; esac
+          done
           ZIG="$(dirname "$0")/../zig-dist/zig"
           LIBDIR="$(rustc --print sysroot)/lib/rustlib/i686-unknown-linux-musl/lib"
           exec "$ZIG" cc -target i386-linux-musl -nostartfiles -L"$LIBDIR" "${args[@]}"
@@ -363,7 +371,8 @@ jobs:
         run: |
           set -euxo pipefail
           OPENSSL_VERSION=1.1.1w
-          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" \
+            -o openssl.tar.gz
           tar -xzf openssl.tar.gz
           cd openssl-${OPENSSL_VERSION}
           sed -i 's|#   include <linux/mman.h>|#   include <sys/mman.h>|' crypto/mem_sec.c
@@ -375,15 +384,6 @@ jobs:
           make -j"$(nproc)" build_libs
           make install_sw
 
-      - name: Cache Rust & Cargo
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-cargo-i686-musl-${{ hashFiles('**/Cargo.lock') }}
-          path: |
-            $HOME/.cargo/registry
-            $HOME/.cargo/git
-            $HOME/.rustup
-
       - name: Install Rust & add MUSL target
         uses: actions-rs/toolchain@v1
         with:
@@ -393,11 +393,10 @@ jobs:
 
       - name: Build (static musl via Zig)
         env:
+          CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_LINKER: i386-linux-musl-cc
           CC_i686_unknown_linux_musl: i386-linux-musl-cc
           AR_i686_unknown_linux_musl: zig-ar
           RANLIB_i686_unknown_linux_musl: zig-ranlib
-          CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_LINKER: i386-linux-musl-cc
-          OPENSSL_STATIC: "1"
           OPENSSL_DIR: ${{ github.workspace }}/openssl-install
         run: cargo build --release --target i686-unknown-linux-musl
 
@@ -405,12 +404,11 @@ jobs:
         run: |
           mkdir -p dist
           cp target/i686-unknown-linux-musl/release/msl-cli \
-            dist/msl-cli-i686-unknown-linux-musl
+             dist/msl-cli-i686-unknown-linux-musl
       - uses: actions/upload-artifact@v4
         with:
           name: msl-cli-i686-unknown-linux-musl
           path: dist/msl-cli-i686-unknown-linux-musl
-
 
   build-linux-gnu-armv7:
     name: Linux GNU (armv7)
@@ -430,29 +428,26 @@ jobs:
       - name: Install armv7 cross compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+          sudo apt-get install -y \
+            gcc-arm-linux-gnueabihf \
+            g++-arm-linux-gnueabihf
 
       - name: Download and build OpenSSL for armv7-gnueabihf
         shell: bash
         run: |
           set -euxo pipefail
           OPENSSL_VERSION=1.1.1w
-          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" \
+            -o openssl.tar.gz
           tar -xzf openssl.tar.gz
           cd openssl-${OPENSSL_VERSION}
-
-          # 让 crypto/mem_sec.c 找到 sys/mman.h
           sed -i 's|#   include <linux/mman.h>|#   include <sys/mman.h>|' crypto/mem_sec.c
-          # 跳过 AFALG 引擎，避免 linux/version.h 缺失
           sed -i 's|#include <linux/version.h>|#include <sys/utsname.h>|' engines/e_afalg.c || true
-
           export CC=arm-linux-gnueabihf-gcc
           export AR=arm-linux-gnueabihf-ar
           export RANLIB=arm-linux-gnueabihf-ranlib
-
           ./Configure linux-armv4 no-shared no-tests no-afalgeng \
-            --prefix="$PWD/../openssl-install" \
-            --cross-compile-prefix=arm-linux-gnueabihf-
+            --prefix="$PWD/../openssl-install"
           make -j"$(nproc)" build_libs
           make install_sw
 
