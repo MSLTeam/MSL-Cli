@@ -280,3 +280,190 @@ jobs:
         with:
           name: msl-cli-aarch64-unknown-linux-musl
           path: dist/msl-cli-aarch64-unknown-linux-musl
+
+  build-linux-gnu-i686:
+    name: Linux GNU (i686)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Rust toolchain & Cargo registry
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cargo-i686-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            $HOME/.cargo/registry
+            $HOME/.cargo/git
+            $HOME/.rustup
+
+      - name: Setup multilib & SSL dev for i386
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib libc6-dev:i386 libssl-dev:i386 pkg-config
+
+      - name: Install Rust (stable)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Add i686 target
+        run: rustup target add i686-unknown-linux-gnu
+
+      - name: Build (release)
+        env:
+          CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER: "gcc -m32"
+          OPENSSL_DIR: /usr
+          OPENSSL_LIB_DIR: /usr/lib/i386-linux-gnu
+          OPENSSL_INCLUDE_DIR: /usr/include/i386-linux-gnu
+        run: cargo build --release --target i686-unknown-linux-gnu
+
+      - name: Rename artifact
+        run: |
+          mkdir -p dist
+          cp target/i686-unknown-linux-gnu/release/msl-cli \
+            dist/msl-cli-i686-unknown-linux-gnu
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-i686-unknown-linux-gnu
+          path: dist/msl-cli-i686-unknown-linux-gnu
+
+
+  build-linux-musl-i686:
+    name: Linux MUSL (i686)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Zig & wrappers
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-zig-0.15.0
+          path: |
+            zig-dist
+            zig-wrap
+
+      - name: Install Zig & generate i386-musl wrapper
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -sSL "https://ziglang.org/builds/zig-x86_64-linux-0.15.0.tar.xz" -o zig.tar.xz
+          mkdir zig-dist
+          tar -xJf zig.tar.xz -C zig-dist --strip-components=1
+          mkdir -p zig-wrap
+          cat > zig-wrap/i386-linux-musl-cc << 'EOF'
+          #!/usr/bin/env bash
+          set -euxo pipefail
+          args=()
+          for a in "$@"; do case "$a" in --target=*|-target=*) ;; *) args+=("$a");; esac; done
+          ZIG="$(dirname "$0")/../zig-dist/zig"
+          LIBDIR="$(rustc --print sysroot)/lib/rustlib/i686-unknown-linux-musl/lib"
+          exec "$ZIG" cc -target i386-linux-musl -nostartfiles -L"$LIBDIR" "${args[@]}"
+          EOF
+          chmod +x zig-wrap/*
+          echo "$PWD/zig-dist" >> $GITHUB_PATH
+          echo "$PWD/zig-wrap" >> $GITHUB_PATH
+
+      - name: Download & build OpenSSL for i386-musl
+        shell: bash
+        run: |
+          set -euxo pipefail
+          OPENSSL_VERSION=1.1.1w
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz
+          tar -xzf openssl.tar.gz
+          cd openssl-${OPENSSL_VERSION}
+          sed -i 's|#   include <linux/mman.h>|#   include <sys/mman.h>|' crypto/mem_sec.c
+          sed -i 's|#include <linux/version.h>|#include <sys/utsname.h>|' engines/e_afalg.c || true
+          export CC=i386-linux-musl-cc
+          export AR=zig-ar
+          export RANLIB=zig-ranlib
+          ./Configure linux-x86 no-shared no-tests no-afalgeng --prefix="$PWD/../openssl-install"
+          make -j"$(nproc)" build_libs
+          make install_sw
+
+      - name: Cache Rust & Cargo
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cargo-i686-musl-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            $HOME/.cargo/registry
+            $HOME/.cargo/git
+            $HOME/.rustup
+
+      - name: Install Rust & add MUSL target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: rustup target add i686-unknown-linux-musl
+
+      - name: Build (static musl via Zig)
+        env:
+          CC_i686_unknown_linux_musl: i386-linux-musl-cc
+          AR_i686_unknown_linux_musl: zig-ar
+          RANLIB_i686_unknown_linux_musl: zig-ranlib
+          CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_LINKER: i386-linux-musl-cc
+          OPENSSL_STATIC: "1"
+          OPENSSL_DIR: ${{ github.workspace }}/openssl-install
+        run: cargo build --release --target i686-unknown-linux-musl
+
+      - name: Rename & upload artifact
+        run: |
+          mkdir -p dist
+          cp target/i686-unknown-linux-musl/release/msl-cli \
+            dist/msl-cli-i686-unknown-linux-musl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-i686-unknown-linux-musl
+          path: dist/msl-cli-i686-unknown-linux-musl
+
+
+  build-linux-gnu-armv7:
+    name: Linux GNU (armv7)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Rust toolchain & Cargo registry
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cargo-armv7-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            $HOME/.cargo/registry
+            $HOME/.cargo/git
+            $HOME/.rustup
+
+      - name: Install armv7 cross compiler & SSL dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libssl-dev:armhf pkg-config
+
+      - name: Install Rust (stable)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Add armv7 target
+        run: rustup target add armv7-unknown-linux-gnueabihf
+
+      - name: Build (release)
+        env:
+          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+          OPENSSL_DIR: /usr
+          OPENSSL_LIB_DIR: /usr/lib/arm-linux-gnueabihf
+          OPENSSL_INCLUDE_DIR: /usr/include/arm-linux-gnueabihf
+        run: cargo build --release --target armv7-unknown-linux-gnueabihf
+
+      - name: Rename artifact
+        run: |
+          mkdir -p dist
+          cp target/armv7-unknown-linux-gnueabihf/release/msl-cli \
+            dist/msl-cli-armv7-unknown-linux-gnueabihf
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-armv7-unknown-linux-gnueabihf
+          path: dist/msl-cli-armv7-unknown-linux-gnueabihf
