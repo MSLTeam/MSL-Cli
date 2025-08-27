@@ -182,6 +182,7 @@ jobs:
 
           exec "$(dirname "$0")/../zig-dist/zig" cc \
             -target aarch64-linux-musl \
+            -fno-crt \
             -L"$LIBDIR" \
             "${args[@]}"
           EOF
