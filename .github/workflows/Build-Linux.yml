@@ -216,7 +216,7 @@ jobs:
           export AR=zig-ar
           export RANLIB=zig-ranlib
 
-          ./Configure linux-aarch64 no-shared no-tests --prefix=$PWD/../openssl-install --cross-compile-prefix=aarch64-linux-musl-
+          ./Configure linux-aarch64 no-shared no-tests no-apps --prefix="$PWD/../openssl-install" --cross-compile-prefix=aarch64-linux-musl-
           make -j$(nproc)
           make install_sw
 
