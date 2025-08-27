@@ -76,19 +76,14 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-
           OPENSSL_VERSION=1.1.1w
-          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" \
-            -o openssl.tar.gz
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz
           tar -xzf openssl.tar.gz
           cd openssl-${OPENSSL_VERSION}
-
           export CC=musl-gcc
           export AR=ar
           export RANLIB=ranlib
-
-          ./Configure linux-x86_64 no-shared no-tests \
-            --prefix="$PWD/../openssl-install"
+          ./Configure linux-x86_64 no-shared no-tests --prefix="$PWD/../openssl-install"
           make -j"$(nproc)" build_libs
           make install_sw
 
