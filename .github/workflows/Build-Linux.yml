@@ -185,17 +185,16 @@ jobs:
           cat > zig-wrap/aarch64-linux-musl-cc << 'EOF'
           #!/usr/bin/env bash
           set -euxo pipefail
-          args=()
-          for a in "$@"; do case "$a" in --target=*|-target=*) ;; *) args+=("$a") ;; esac; done
-          linking=true
-          for a in "${args[@]}"; do case "$a" in -c|-S|-E) linking=false;; esac; done
-          ZIG="$(dirname "$0")/../zig-dist/zig"
+          SYSROOT="$(rustc --print sysroot)/lib/rustlib/aarch64-unknown-linux-musl/lib/self-contained"
           LIBDIR="$(rustc --print sysroot)/lib/rustlib/aarch64-unknown-linux-musl/lib"
-          if $linking; then
-            exec "$ZIG" cc -target aarch64-linux-musl -nostartfiles -L"$LIBDIR" "${args[@]}"
-          else
-            exec "$ZIG" cc -target aarch64-linux-musl "${args[@]}"
-          fi
+          args=()
+          for a in "$@"; do
+            case "$a" in
+              --target=*|-target=*|"$SYSROOT"/*) ;;
+              *) args+=("$a") ;;
+            esac
+          done
+          exec "$(dirname "$0")/../zig-dist/zig" cc -target aarch64-linux-musl -L"$LIBDIR" "${args[@]}"
           EOF
           cat > zig-wrap/zig-ar << 'EOF'
           #!/usr/bin/env bash
