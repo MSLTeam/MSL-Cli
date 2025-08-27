@@ -155,8 +155,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          curl -sSL "https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz" \
-            -o zig.tar.xz
+          curl -sSL "https://ziglang.org/builds/zig-x86_64-linux-0.15.0-dev.1593+399bace2f.tar.xz" -o zig.tar.xz
           mkdir zig-dist
           tar -xJf zig.tar.xz -C zig-dist --strip-components=1
           mkdir -p zig-wrap
@@ -164,18 +163,16 @@ jobs:
           #!/usr/bin/env bash
           set -euxo pipefail
           args=()
-          for a in "$@"; do
-            case "$a" in
-              --target=*|-target=*)    ;;
-              *) args+=("$a")          ;;
-            esac
-          done
+          for a in "$@"; do case "$a" in --target=*|-target=*) ;; *) args+=("$a") ;; esac; done
+          linking=true
+          for a in "${args[@]}"; do case "$a" in -c|-S|-E) linking=false;; esac; done
+          ZIG="$(dirname "$0")/../zig-dist/zig"
           LIBDIR="$(rustc --print sysroot)/lib/rustlib/aarch64-unknown-linux-musl/lib"
-          exec "$(dirname "$0")/../zig-dist/zig" cc \
-            -target aarch64-linux-musl \
-            -fno-crt \
-            -L"$LIBDIR" \
-            "${args[@]}"
+          if $linking; then
+            exec "$ZIG" cc -target aarch64-linux-musl -nostartfiles -L"$LIBDIR" "${args[@]}"
+          else
+            exec "$ZIG" cc -target aarch64-linux-musl "${args[@]}"
+          fi
           EOF
           cat > zig-wrap/zig-ar << 'EOF'
           #!/usr/bin/env bash
