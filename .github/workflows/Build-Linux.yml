@@ -67,7 +67,7 @@ jobs:
       - name: Install musl toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools
+          sudo apt-get install -y musl-tools linux-libc-dev
 
       - name: Install Rust target
         run: rustup target add x86_64-unknown-linux-musl
@@ -160,14 +160,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: 缓存 Zig 与 wrappers
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-zig-0.15.0-dev.1593+399bace2f
-          path: |
-            zig-dist
-            zig-wrap
 
       - name: 安装 Zig 并生成智能 wrapper
         shell: bash
