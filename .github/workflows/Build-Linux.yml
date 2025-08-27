@@ -202,6 +202,24 @@ jobs:
           echo "$PWD/zig-dist" >> $GITHUB_PATH
           echo "$PWD/zig-wrap" >> $GITHUB_PATH
 
+      - name: 构建 OpenSSL for aarch64-musl
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          OPENSSL_VERSION=1.1.1w
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz
+          tar -xzf openssl.tar.gz
+          cd openssl-${OPENSSL_VERSION}
+
+          export CC=aarch64-linux-musl-cc
+          export AR=zig-ar
+          export RANLIB=zig-ranlib
+
+          ./Configure linux-aarch64 no-shared no-tests --prefix=$PWD/../openssl-install --cross-compile-prefix=aarch64-linux-musl-
+          make -j$(nproc)
+          make install_sw
+
       - name: 缓存 Rust & Cargo
         uses: actions/cache@v4
         with:
@@ -221,12 +239,13 @@ jobs:
 
       - name: 构建 (static musl via Zig)
         shell: bash
-        env:
+        env: 
           CC_aarch64_unknown_linux_musl: aarch64-linux-musl-cc
           AR_aarch64_unknown_linux_musl: zig-ar
-          RANLIB_aarch64_unknown_linux-musl: zig-ranlib
+          RANLIB_aarch64_unknown_linux_musl: zig-ranlib
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-musl-cc
-          OPENSSL_STATIC: 1
+          OPENSSL_STATIC: "1"
+          OPENSSL_DIR: ${{ github.workspace }}/openssl-install
         run: cargo build --release --target aarch64-unknown-linux-musl
 
       - name: 重命名 & 上传产物
