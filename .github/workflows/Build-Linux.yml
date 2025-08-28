@@ -380,7 +380,10 @@ jobs:
           export CC=i386-linux-musl-cc
           export AR=zig-ar
           export RANLIB=zig-ranlib
-          ./Configure linux-x86 no-shared no-tests no-afalgeng --prefix="$PWD/../openssl-install"
+          export KERNEL_BITS=32
+          ./Configure linux-elf no-shared no-tests no-afalgeng \
+  --cross-compile-prefix=i386-linux-musl- \
+  --prefix="$PWD/../openssl-install"
           make -j"$(nproc)" build_libs
           make install_sw
 
