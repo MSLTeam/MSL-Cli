@@ -382,8 +382,8 @@ jobs:
           export RANLIB=zig-ranlib
           export KERNEL_BITS=32
           ./Configure linux-elf no-shared no-tests no-afalgeng \
-  --cross-compile-prefix=i386-linux-musl- \
-  --prefix="$PWD/../openssl-install"
+            --cross-compile-prefix=i386-linux-musl- \
+            --prefix="$PWD/../openssl-install"
           make -j"$(nproc)" build_libs
           make install_sw
 
