@@ -443,9 +443,10 @@ jobs:
           sed -i 's|#   include <linux/mman.h>|#   include <sys/mman.h>|' crypto/mem_sec.c
           sed -i 's|#include <linux/version.h>|#include <sys/utsname.h>|' engines/e_afalg.c || true
           export CC=arm-linux-gnueabihf-gcc
+          export CROSS_COMPILE=i386-linux-musl-
           export AR=arm-linux-gnueabihf-ar
           export RANLIB=arm-linux-gnueabihf-ranlib
-          ./Configure linux-armv4 no-shared no-tests no-afalgeng \
+          ./Configure linux-x86 no-shared no-tests no-afalgeng --cross-compile-prefix=i386-linux-musl- \
             --prefix="$PWD/../openssl-install"
           make -j"$(nproc)" build_libs
           make install_sw
