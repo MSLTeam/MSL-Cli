@@ -432,13 +432,12 @@ jobs:
             gcc-arm-linux-gnueabihf \
             g++-arm-linux-gnueabihf
 
-      - name: Download and build OpenSSL for armv7-gnueabihf
+      - name: Download & build OpenSSL for armv7-gnueabihf
         shell: bash
         run: |
           set -euxo pipefail
           OPENSSL_VERSION=1.1.1w
-          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" \
-            -o openssl.tar.gz
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz
           tar -xzf openssl.tar.gz
           cd openssl-${OPENSSL_VERSION}
           sed -i 's|#   include <linux/mman.h>|#   include <sys/mman.h>|' crypto/mem_sec.c
@@ -451,7 +450,7 @@ jobs:
           make -j"$(nproc)" build_libs
           make install_sw
 
-      - name: Install Rust (stable)
+      - name: Install Rust & add target
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -462,7 +461,8 @@ jobs:
 
       - name: Build (release)
         env:
-          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNU_EABIHF_LINKER: arm-linux-gnueabihf-gcc
+          CC_armv7_unknown_linux_gnueabihf: arm-linux-gnueabihf-gcc
+          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
           OPENSSL_DIR: ${{ github.workspace }}/openssl-install
           OPENSSL_LIB_DIR: ${{ github.workspace }}/openssl-install/lib
           OPENSSL_INCLUDE_DIR: ${{ github.workspace }}/openssl-install/include
