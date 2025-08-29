@@ -385,7 +385,7 @@ jobs:
 
           ./Configure linux-elf no-shared no-tests no-afalgeng \
             --prefix="$PWD/../openssl-install"
-          make -j"$(nproc)" build_crypto build_ssl
+          make -j"$(nproc)" build_libs
           make install_sw
 
       - name: Install Rust & add MUSL target
@@ -456,7 +456,7 @@ jobs:
 
           ./Configure linux-elf no-shared no-tests no-afalgeng \
             --prefix="$PWD/../openssl-install"
-          make -j"$(nproc)" build_crypto build_ssl
+          make -j"$(nproc)" build_libs
           make install_sw
       
       - name: Install Rust & add target
