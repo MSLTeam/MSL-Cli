@@ -40,18 +40,11 @@ jobs:
         run: |
           cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename artifact
-        run: |
-          mkdir -p dist
-          cp target/${{ matrix.target }}/release/msl-cli \
-             dist/msl-cli-${{ matrix.target }}
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-${{ matrix.target }}
-          path: dist/msl-cli-${{ matrix.target }}
-
+          path: target/${{ matrix.target }}/release/msl-cli
 
   build-ios:
     name: iOS (Simulator & Device)
@@ -75,14 +68,8 @@ jobs:
           export CARGO_TARGET_AARCH64_APPLE_IOS_LINKER=$(xcrun -f clang)
           cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename artifact
-        run: |
-          mkdir -p dist
-          cp target/${{ matrix.target }}/release/msl-cli \
-             dist/msl-cli-${{ matrix.target }}
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-${{ matrix.target }}
-          path: dist/msl-cli-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/msl-cli
