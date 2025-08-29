@@ -25,9 +25,5 @@ rpassword = "7.4.0"
 name = "msl-cli"
 path = "src/main.rs"
 
-[target.'cfg(any(
-    all(target_arch = "arm", target_pointer_width = "32", target_os = "linux"),
-    all(target_arch = "riscv64", target_os = "linux"),
-    all(target_arch = "i686", target_env = "musl")
-))'.dependencies]
+[target.'cfg(any(all(targetarch = "arm", targetos = "linux"),all(targetarch = "riscv64", targetos = "linux"),all(targetarch = "i686", targetenv = "musl")))'.dependencies]
 openssl = { version = "0.10.73", default-features = false, features = ["vendored", "v300"] }
