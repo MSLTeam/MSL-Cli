@@ -371,24 +371,21 @@ jobs:
         run: |
           set -euxo pipefail
           OPENSSL_VERSION=1.1.1w
-          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" \
-            -o openssl.tar.gz
+          curl -sSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz
           tar -xzf openssl.tar.gz
           cd openssl-${OPENSSL_VERSION}
 
-          # 让 OpenSSL 按 32 位流程，不再解析 "i386"
-          export KERNEL_BITS=32
+          sed -i 's|#   include <linux/mman.h>|#   include <sys/mman.h>|' crypto/mem_sec.c
+          sed -i 's|#include <linux/version.h>|#include <sys/utsname.h>|' engines/e_afalg.c || true
 
-          # 指定 Zig wrapper
+          export KERNEL_BITS=32
           export CC=i386-linux-musl-cc
           export AR=zig-ar
           export RANLIB=zig-ranlib
 
-          # 用 linux-elf target，跳过 AFALG 引擎，只编静态库
           ./Configure linux-elf no-shared no-tests no-afalgeng \
             --prefix="$PWD/../openssl-install"
-
-          make -j"$(nproc)" build_libs
+          make -j"$(nproc)" buildcrypto buildssl
           make install_sw
 
       - name: Install Rust & add MUSL target
@@ -458,9 +455,8 @@ jobs:
           export RANLIB=arm-linux-gnueabihf-ranlib
 
           ./Configure linux-elf no-shared no-tests no-afalgeng \
-            --cross-compile-prefix=arm-linux-gnueabihf- \
             --prefix="$PWD/../openssl-install"
-          make -j"$(nproc)" build_libs
+          make -j"$(nproc)" buildcrypto buildssl
           make install_sw
       
       - name: Install Rust & add target
