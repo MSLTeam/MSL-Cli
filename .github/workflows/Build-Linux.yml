@@ -364,3 +364,50 @@ jobs:
         with:
           name: msl-cli-armv7-unknown-linux-gnueabihf
           path: target/armv7-unknown-linux-gnueabihf/release/msl-cli
+  cross-linux-gnu-riscv64:
+    name: Cross Linux GNU (riscv64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v2
+        with: { platforms: all }
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Install cross
+        run: cargo install --locked cross
+      - name: Add Rust target
+        run: rustup target add riscv64gc-unknown-linux-gnu
+      - name: Build (riscv64gc-unknown-linux-gnu)
+        run: |
+          cross build --release \
+            --target riscv64gc-unknown-linux-gnu \
+            --features vendored-openssl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-riscv64gc-unknown-linux-gnu
+          path: target/riscv64gc-unknown-linux-gnu/release/msl-cli
+
+  cross-linux-musl-riscv64:
+    name: Cross Linux MUSL (riscv64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v2
+        with: { platforms: all }
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Install cross
+        run: cargo install --locked cross
+      - name: Add Rust target
+        run: rustup target add riscv64gc-unknown-linux-musl
+      - name: Build (riscv64gc-unknown-linux-musl)
+        run: |
+          cross build --release \
+            --target riscv64gc-unknown-linux-musl \
+            --features vendored-openssl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-riscv64gc-unknown-linux-musl
+          path: target/riscv64gc-unknown-linux-musl/release/msl-cli
