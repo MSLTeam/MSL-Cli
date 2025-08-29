@@ -36,17 +36,11 @@ jobs:
       - name: Build (release)
         run: cargo build --release --target x86_64-unknown-linux-gnu
 
-      - name: Rename artifact
-        run: |
-          mkdir -p dist
-          cp target/x86_64-unknown-linux-gnu/release/msl-cli \
-             dist/msl-cli-x86_64-unknown-linux-gnu
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-x86_64-unknown-linux-gnu
-          path: dist/msl-cli-x86_64-unknown-linux-gnu
+          path: target/x86_64-unknown-linux-gnu/release/msl-cli
 
   build-linux-musl-x86_64:
     name: Linux MUSL (x86_64)
@@ -96,17 +90,11 @@ jobs:
           OPENSSL_INCLUDE_DIR: ${{ github.workspace }}/openssl-install/include
         run: cargo build --release --target x86_64-unknown-linux-musl
 
-      - name: Rename artifact
-        run: |
-          mkdir -p dist
-          cp target/x86_64-unknown-linux-musl/release/msl-cli \
-             dist/msl-cli-x86_64-unknown-linux-musl
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-x86_64-unknown-linux-musl
-          path: dist/msl-cli-x86_64-unknown-linux-musl
+          path: target/x86_64-unknown-linux-musl/release/msl-cli
 
   build-linux-gnu-aarch64:
     name: Linux GNU (aarch64)
@@ -166,17 +154,11 @@ jobs:
           OPENSSL_INCLUDE_DIR: ${{ github.workspace }}/openssl-install/include
         run: cargo build --release --target aarch64-unknown-linux-gnu
 
-      - name: Rename artifact
-        run: |
-          mkdir -p dist
-          cp target/aarch64-unknown-linux-gnu/release/msl-cli \
-             dist/msl-cli-aarch64-unknown-linux-gnu
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-aarch64-unknown-linux-gnu
-          path: dist/msl-cli-aarch64-unknown-linux-gnu
+          path: target/aarch64-unknown-linux-gnu/release/msl-cli
           
   build-linux-musl-aarch64:
     name: Linux MUSL (aarch64)
@@ -185,7 +167,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 安装 Zig 并生成智能 wrapper
+      - name: Install Zig
         shell: bash
         run: |
           set -euxo pipefail
@@ -221,7 +203,7 @@ jobs:
           echo "$PWD/zig-dist" >> $GITHUB_PATH
           echo "$PWD/zig-wrap" >> $GITHUB_PATH
           
-      - name: 构建 OpenSSL for aarch64-musl
+      - name: Build OpenSSL for aarch64-musl
         shell: bash
         run: |
           set -euxo pipefail
@@ -241,7 +223,7 @@ jobs:
           make -j"$(nproc)" build_libs
           make install_sw   
 
-      - name: 缓存 Rust & Cargo
+      - name: Cache Rust & Cargo
         uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -250,15 +232,14 @@ jobs:
             $HOME/.cargo/git
             $HOME/.rustup
 
-      - name: 安装 Rust & 添加 MUSL target
+      - name: Install Rust & Add MUSL target
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-
       - run: rustup target add aarch64-unknown-linux-musl
 
-      - name: 构建 (static musl via Zig)
+      - name: Build (static musl via Zig)
         shell: bash
         env: 
           CC_aarch64_unknown_linux_musl: aarch64-linux-musl-cc
@@ -269,17 +250,11 @@ jobs:
           OPENSSL_DIR: ${{ github.workspace }}/openssl-install
         run: cargo build --release --target aarch64-unknown-linux-musl
 
-      - name: 重命名 & 上传产物
-        shell: bash
-        run: |
-          mkdir -p dist
-          cp target/aarch64-unknown-linux-musl/release/msl-cli \
-             dist/msl-cli-aarch64-unknown-linux-musl
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: msl-cli-aarch64-unknown-linux-musl
-          path: dist/msl-cli-aarch64-unknown-linux-musl
+          path: target/aarch64-unknown-linux-musl/release/msl-cli
 
   build-linux-gnu-i686:
     name: Linux GNU (i686)
@@ -325,19 +300,11 @@ jobs:
           OPENSSL_INCLUDE_DIR: /usr/include/i386-linux-gnu
         run: cargo build --release --target i686-unknown-linux-gnu
 
-      - name: Rename artifact
-        run: |
-          mkdir -p dist
-          cp target/i686-unknown-linux-gnu/release/msl-cli \
-             dist/msl-cli-i686-unknown-linux-gnu
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: msl-cli-i686-unknown-linux-gnu
-          path: dist/msl-cli-i686-unknown-linux-gnu
-
-
-
+          path: target/i686-unknown-linux-gnu/release/msl-cli
 
   cross-linux-musl-i686:
     name: Cross Linux MUSL (i686)
