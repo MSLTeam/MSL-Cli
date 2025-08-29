@@ -26,11 +26,8 @@ name = "msl-cli"
 path = "src/main.rs"
 
 [target.'cfg(any(
-    all(target_arch = "arm", target_os = "linux"),
+    all(target_arch = "arm", target_pointer_width = "32", target_os = "linux"),
     all(target_arch = "riscv64", target_os = "linux"),
     all(target_arch = "i686", target_env = "musl")
 ))'.dependencies]
-openssl = { version = "0.10", optional = true }
-
-[features]
-vendored-openssl = ["openssl/vendored", "openssl/v300"]
+openssl = { version = "0.10.73", default-features = false, features = ["vendored", "v300"] }
