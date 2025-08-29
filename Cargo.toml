@@ -24,3 +24,6 @@ rpassword = "7.4.0"
 [[bin]]
 name = "msl-cli"
 path = "src/main.rs"
+
+[features]
+vendored-openssl = ["openssl-sys/vendored"]
