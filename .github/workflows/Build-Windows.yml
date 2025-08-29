@@ -25,14 +25,11 @@ jobs:
       - name: Build (MSVC x86_64)
         run: cargo build --release --target x86_64-pc-windows-msvc
 
-      - name: Rename artifact
-        run: mv target/x86_64-pc-windows-msvc/release/msl-cli.exe target/x86_64-pc-windows-msvc/release/msl-cli-x86_64-pc-windows-msvc.exe
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-x86_64-pc-windows-msvc
-          path: target/x86_64-pc-windows-msvc/release/msl-cli-x86_64-pc-windows-msvc.exe
+          path: target/x86_64-pc-windows-msvc/release/msl-cli.exe
 
   build-windows-gnu-x86_64:
     name: Windows GNU (x86_64)
@@ -65,15 +62,11 @@ jobs:
         shell: msys2 {0}
         run: cargo build --release --target x86_64-pc-windows-gnu
 
-      - name: Rename artifact
-        shell: bash
-        run: mv target/x86_64-pc-windows-gnu/release/msl-cli.exe target/x86_64-pc-windows-gnu/release/msl-cli-x86_64-pc-windows-gnu.exe
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-x86_64-pc-windows-gnu
-          path: target/x86_64-pc-windows-gnu/release/msl-cli-x86_64-pc-windows-gnu.exe
+          path: target/x86_64-pc-windows-gnu/release/msl-cli.exe
 
   build-windows-msvc-arm64: 
     name: Windows MSVC (ARM64)
@@ -102,15 +95,11 @@ jobs:
         run: cargo build --release --target aarch64-pc-windows-msvc
         shell: bash
 
-      - name: Rename artifact
-        run: mv target/aarch64-pc-windows-msvc/release/msl-cli.exe target/aarch64-pc-windows-msvc/release/msl-cli-aarch64-pc-windows-msvc.exe
-        shell: bash
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-aarch64-pc-windows-msvc
-          path: target/aarch64-pc-windows-msvc/release/msl-cli-aarch64-pc-windows-msvc.exe
+          path: target/aarch64-pc-windows-msvc/release/msl-cli.exe
           
   windows-i686-msvc:
     name: Windows MSVC (i686)
@@ -128,14 +117,11 @@ jobs:
       - name: Build (i686 MSVC)
         run: cargo build --target i686-pc-windows-msvc --release
 
-      - name: Rename artifact
-        run: mv target/i686-pc-windows-msvc/release/msl-cli.exe target/i686-pc-windows-msvc/release/msl-cli-i686-pc-windows-msvc.exe
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-i686-pc-windows-msvc
-          path: target/i686-pc-windows-msvc/release/msl-cli-i686-pc-windows-msvc.exe
+          path: target/i686-pc-windows-msvc/release/msl-cli.exe
 
   windows-i686-gnu:
     name: Windows GNU (i686)
@@ -172,12 +158,8 @@ jobs:
         shell: msys2 {0}
         run: cargo build --release --target i686-pc-windows-gnu
 
-      - name: Rename artifact
-        shell: bash
-        run: mv target/i686-pc-windows-gnu/release/msl-cli.exe target/i686-pc-windows-gnu/release/msl-cli-i686-pc-windows-gnu.exe
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: msl-cli-i686-pc-windows-gnu
-          path: target/i686-pc-windows-gnu/release/msl-cli-i686-pc-windows-gnu.exe
+          path: target/i686-pc-windows-gnu/release/msl-cli.exe
