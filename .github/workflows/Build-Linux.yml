@@ -360,7 +360,7 @@ jobs:
         run: rustup target add i686-unknown-linux-musl
 
       - name: Build (i686-unknown-linux-musl)
-        run: cross build --release --target i686-unknown-linux-musl
+        run: cross build --release --target i686-unknown-linux-musl --features vendored
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -390,7 +390,7 @@ jobs:
         run: rustup target add armv7-unknown-linux-gnueabihf
 
       - name: Build (armv7-unknown-linux-gnueabihf)
-        run: cross build --release --target armv7-unknown-linux-gnueabihf
+        run: cross build --release --target armv7-unknown-linux-gnueabihf --features vendored
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
