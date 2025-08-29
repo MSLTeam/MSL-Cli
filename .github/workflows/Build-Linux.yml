@@ -379,8 +379,6 @@ jobs:
       - name: Add Rust target
         run: rustup target add riscv64gc-unknown-linux-gnu
       - name: Build (riscv64gc-unknown-linux-gnu)
-        env:
-          CROSS_RUN_ARGS: "--env OPENSSL_NO_ASM=1"
         run: |
           cross build --release \
             --target riscv64gc-unknown-linux-gnu
@@ -404,8 +402,6 @@ jobs:
       - name: Add Rust target
         run: rustup target add riscv64gc-unknown-linux-musl
       - name: Build (riscv64gc-unknown-linux-musl)
-        env:
-          CROSS_RUN_ARGS: "--env OPENSSL_NO_ASM=1"
         run: |
           cross build --release \
             --target riscv64gc-unknown-linux-musl
