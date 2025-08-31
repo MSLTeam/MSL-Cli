@@ -381,7 +381,7 @@ jobs:
       - name: Build (riscv64gc-unknown-linux-gnu)
         run: |
           cross build --release \
-            --target riscv64gc-unknown-linux-gnu --features vendored-openssl
+            --target riscv64gc-unknown-linux-gnu
       - uses: actions/upload-artifact@v4
         with:
           name: msl-cli-riscv64gc-unknown-linux-gnu
@@ -404,7 +404,7 @@ jobs:
       - name: Build (riscv64gc-unknown-linux-musl)
         run: |
           cross build --release \
-            --target riscv64gc-unknown-linux-musl --features vendored-openssl
+            --target riscv64gc-unknown-linux-musl
       - uses: actions/upload-artifact@v4
         with:
           name: msl-cli-riscv64gc-unknown-linux-musl
