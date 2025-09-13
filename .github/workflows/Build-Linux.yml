@@ -390,7 +390,7 @@ jobs:
             --env AR=riscv64-unknown-linux-gnu-ar
             --env RANLIB=riscv64-unknown-linux-gnu-ranlib
         run: |
-          git clone --branch OpenSSL11_1u https://github.com/openssl/openssl.git
+          git clone https://github.com/openssl/openssl.git
           cd openssl
           ./Configure linux-generic64 no-shared no-tests \
             --prefix=$(pwd)/../openssl-riscv
@@ -436,7 +436,7 @@ jobs:
             --env AR=riscv64-unknown-linux-gnu-ar
             --env RANLIB=riscv64-unknown-linux-gnu-ranlib
         run: |
-          git clone --branch OpenSSL11_1u https://github.com/openssl/openssl.git
+          git clone https://github.com/openssl/openssl.git
           cd openssl
           ./Configure linux-generic64 no-shared no-tests \
             --prefix=$(pwd)/../openssl-riscv
