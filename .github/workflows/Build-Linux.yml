@@ -413,44 +413,43 @@ jobs:
   cross-linux-musl-riscv64:
     name: Cross Linux MUSL (riscv64)
     runs-on: ubuntu-latest
+    env:
+      CROSS_CONTAINER: clux/muslrust:stable-riscv64
+      OPENSSL_PREFIX: ${{ github.workspace }}/openssl-riscv
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v2
-        with: { platforms: all }
+        with:
+          platforms: all
 
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v2
 
       - name: Install cross
         run: cargo install --locked cross
+
       - name: Add Rust target
         run: rustup target add riscv64gc-unknown-linux-musl
 
       - name: Build OpenSSL for riscv64
-        env:
-          CROSSRUNARGS: >-
-            --entrypoint=/bin/sh
-            --env CC=riscv64-unknown-linux-gnu-gcc
-            --env AR=riscv64-unknown-linux-gnu-ar
-            --env RANLIB=riscv64-unknown-linux-gnu-ranlib
         run: |
-          git clone https://github.com/openssl/openssl.git
+          git clone --branch OpenSSL_1_1_1u https://github.com/openssl/openssl.git
           cd openssl
           ./Configure linux-generic64 no-shared no-tests \
-            --prefix=$(pwd)/../openssl-riscv
-          make -j$(nproc) && make install_sw
+            --prefix=$OPENSSL_PREFIX \
+            --cross-compile-prefix=riscv64-linux-musl-
+          make -j$(nproc) install_sw
 
-      - name: Build (riscv64gc-unknown-linux-musl)
+      - name: Build msl-cli
         env:
-          OPENSSL_DIR: ${{ github.workspace }}/openssl-riscv
-          OPENSSLINCLUDEDIR: ${{ github.workspace }}/openssl-riscv/include
-          OPENSSLLIBDIR: ${{ github.workspace }}/openssl-riscv/lib
+          OPENSSL_DIR: ${{ env.OPENSSL_PREFIX }}
+          OPENSSL_INCLUDE_DIR: ${{ env.OPENSSL_PREFIX }}/include
+          OPENSSL_LIB_DIR: ${{ env.OPENSSL_PREFIX }}/lib
           OPENSSL_STATIC: "1"
-        run: |
-          cross build --release \
-            --target riscv64gc-unknown-linux-musl
+        run: cross build --release --target riscv64gc-unknown-linux-musl
+
       - uses: actions/upload-artifact@v4
         with:
           name: msl-cli-riscv64gc-unknown-linux-musl
