@@ -368,37 +368,36 @@ jobs:
   cross-linux-gnu-riscv64:
     name: Cross Linux GNU (riscv64)
     runs-on: ubuntu-latest
+    env:
+      CROSS_CONTAINER: local/riscv64-gnu-openssl:latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install C cross toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu binutils-riscv64-linux-gnu
+
+      - name: Build custom cross image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: .github/docker/Dockerfile.riscv64-gnu
+          push: false
+          tags: local/riscv64-gnu-openssl:latest
+
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v2
         with:
           platforms: all
+
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v2
+
       - name: Install cross
         run: cargo install --locked cross
+
       - name: Add Rust target
         run: rustup target add riscv64gc-unknown-linux-gnu
-      - name: Build OpenSSL for riscv64
-        run: |
-          git clone https://github.com/openssl/openssl.git
-          cd openssl
-          ./Configure linux-generic64 no-shared no-tests \
-            --prefix=$(pwd)/../openssl-riscv \
-            --cross-compile-prefix=riscv64-linux-gnu-
-          make -j$(nproc) install_sw
+
       - name: Build msl-cli
-        env:
-          OPENSSL_DIR: ${{ github.workspace }}/openssl-riscv
-          OPENSSL_INCLUDE_DIR: ${{ github.workspace }}/openssl-riscv/include
-          OPENSSL_LIB_DIR: ${{ github.workspace }}/openssl-riscv/lib
-          OPENSSL_STATIC: "1"
         run: cross build --release --target riscv64gc-unknown-linux-gnu
+
       - uses: actions/upload-artifact@v4
         with:
           name: msl-cli-riscv64gc-unknown-linux-gnu
