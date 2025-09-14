@@ -1,5 +1,4 @@
-FROM ghcr.io/cross-rs/riscv64-unknown-linux-gnu:latest
+FROM rustembedded/cross:riscv64-unknown-linux-gnu
 RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      pkg-config libssl-dev \
+ && apt-get install -y --no-install-recommends pkg-config libssl-dev \
  && rm -rf /var/lib/apt/lists/*
