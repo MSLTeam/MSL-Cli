@@ -11,3 +11,9 @@ pre-build = [
   "apt-get update",
   "apt-get install -y --no-install-recommends libssl-dev pkg-config"
 ]
+
+[target.riscv64gc-unknown-linux-gnu.openssl]
+version = "1.1.1"
+
+[target.riscv64gc-unknown-linux-musl.openssl]
+version = "1.1.1"
