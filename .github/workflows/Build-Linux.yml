@@ -393,19 +393,11 @@ jobs:
         with:
           platforms: all
 
-      - name: Setup Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: Install cross
         run: cargo install --locked cross
 
       - name: Add Rust target
         run: rustup target add riscv64gc-unknown-linux-gnu
-
-      - name: Install OpenSSL dev
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
 
       - name: Build msl-cli
         run: cross build --release --target riscv64gc-unknown-linux-gnu
