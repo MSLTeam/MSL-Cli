@@ -1,0 +1,5 @@
+[target.riscv64gc-unknown-linux-gnu]
+pre-build = ["apt-get update && apt-get install -y --no-install-recommends libssl-dev pkg-config"]
+
+[target.riscv64gc-unknown-linux-musl]
+pre-build = ["apt-get update && apt-get install -y --no-install-recommends libssl-dev pkg-config"]
