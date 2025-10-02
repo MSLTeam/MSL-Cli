@@ -1,13 +1,13 @@
 [target.riscv64gc-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-gnu:edge"
 pre-build = [
-  "dpkg --add-architecture riscv64",
   "apt-get update",
-  "apt-get install -y --no-install-recommends libssl-dev:riscv64 pkg-config"
+  "apt-get install -y --no-install-recommends libssl-dev pkg-config"
 ]
 
 [target.riscv64gc-unknown-linux-musl]
+image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:edge"
 pre-build = [
-  "dpkg --add-architecture riscv64",
   "apt-get update",
-  "apt-get install -y --no-install-recommends libssl-dev:riscv64 pkg-config"
+  "apt-get install -y --no-install-recommends libssl-dev pkg-config"
 ]
