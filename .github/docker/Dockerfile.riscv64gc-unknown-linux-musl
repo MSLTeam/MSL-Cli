@@ -1,4 +1,4 @@
-FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:latest
+FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:main
 RUN apt-get update \
  && apt-get install -y --no-install-recommends pkg-config libssl-dev \
  && rm -rf /var/lib/apt/lists/*
