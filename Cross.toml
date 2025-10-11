@@ -1,5 +1,5 @@
-[target.riscv64gc-unknown-linux-gnu.openssl]
-version = "1.1.1"
+[target.riscv64gc-unknown-linux-gnu]
+image = "cross-custom-riscv64-gnu:latest"
 
-[target.riscv64gc-unknown-linux-musl.openssl]
-version = "1.1.1"
+[target.riscv64gc-unknown-linux-musl]
+image = "cross-custom-riscv64-musl:latest"
