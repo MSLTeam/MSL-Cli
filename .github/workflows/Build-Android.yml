@@ -30,13 +30,17 @@ jobs:
           ndk-version: r25c
           add-to-path: true
 
-      - name: Ensure toolchain on PATH and create clang aliases
+      - name: Export toolchain paths and CC envs
         run: |
           TOOLCHAIN_BIN="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          echo "TOOLCHAIN_BIN=${TOOLCHAIN_BIN}" >> $GITHUB_ENV
-          echo "${TOOLCHAIN_BIN}" >> $GITHUB_PATH
-          [ -e "${TOOLCHAIN_BIN}/aarch64-linux-android-clang" ] || ln -s "${TOOLCHAIN_BIN}/aarch64-linux-android21-clang" "${TOOLCHAIN_BIN}/aarch64-linux-android-clang"
-          [ -e "${TOOLCHAIN_BIN}/armv7a-linux-androideabi-clang" ] || ln -s "${TOOLCHAIN_BIN}/armv7a-linux-androideabi21-clang" "${TOOLCHAIN_BIN}/armv7a-linux-androideabi-clang"
+          echo "${TOOLCHAIN_BIN}" >> "$GITHUB_PATH"
+          echo "TOOLCHAIN_BIN=${TOOLCHAIN_BIN}" >> "$GITHUB_ENV"
+          echo "CC_aarch64-linux-android=aarch64-linux-android21-clang" >> "$GITHUB_ENV"
+          echo "CC_armv7-linux-androideabi=armv7a-linux-androideabi21-clang" >> "$GITHUB_ENV"
+          echo "AR_aarch64-linux-android=llvm-ar" >> "$GITHUB_ENV"
+          echo "AR_armv7-linux-androideabi=llvm-ar" >> "$GITHUB_ENV"
+          echo "RANLIB_aarch64-linux-android=llvm-ranlib" >> "$GITHUB_ENV"
+          echo "RANLIB_armv7-linux-androideabi=llvm-ranlib" >> "$GITHUB_ENV"
 
       - name: Prepare OpenSSL source per-target
         run: |
@@ -49,20 +53,19 @@ jobs:
         run: |
           set -eux
           ANDROID_API=21
-          TOOLCHAIN_BIN="${TOOLCHAIN_BIN}"
           CONFIG_OPTS="no-shared no-tests no-async no-afalgeng no-asm no-bf no-rc2 no-rc4 no-cast no-idea"
           if [ "${{ matrix.target }}" = "aarch64-linux-android" ]; then
             CONF="android-arm64"
             PREFIX="/opt/openssl-android-aarch64"
-            CC_PATH="${TOOLCHAIN_BIN}/aarch64-linux-android${ANDROID_API}-clang"
+            CC_PATH="aarch64-linux-android21-clang"
           else
             CONF="android-arm"
             PREFIX="/opt/openssl-android-armv7"
-            CC_PATH="${TOOLCHAIN_BIN}/armv7a-linux-androideabi${ANDROID_API}-clang"
+            CC_PATH="armv7a-linux-androideabi21-clang"
           fi
-          AR_PATH="${TOOLCHAIN_BIN}/llvm-ar"
-          RANLIB_PATH="${TOOLCHAIN_BIN}/llvm-ranlib"
-          NM_PATH="${TOOLCHAIN_BIN}/llvm-nm"
+          AR_PATH="llvm-ar"
+          RANLIB_PATH="llvm-ranlib"
+          NM_PATH="llvm-nm"
           cd "openssl-${{ matrix.target }}"
           perl ./Configure "${CONF}" ${CONFIG_OPTS} --prefix="${PREFIX}" CC="${CC_PATH}" AR="${AR_PATH}" RANLIB="${RANLIB_PATH}" NM="${NM_PATH}"
           make clean
@@ -73,12 +76,12 @@ jobs:
           mkdir -p .cargo
           cat > .cargo/config.toml <<'EOF'
           [target.aarch64-linux-android]
-          linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
-          ar = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          linker = "aarch64-linux-android21-clang"
+          ar = "llvm-ar"
 
           [target.armv7-linux-androideabi]
-          linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
-          ar = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          linker = "armv7a-linux-androideabi21-clang"
+          ar = "llvm-ar"
           EOF
 
       - name: Build Rust project
@@ -87,12 +90,6 @@ jobs:
           OPENSSL_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64' || '/opt/openssl-android-armv7' }}
           OPENSSL_LIB_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/lib' || '/opt/openssl-android-armv7/lib' }}
           OPENSSL_INCLUDE_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/include' || '/opt/openssl-android-armv7/include' }}
-          CC_aarch64-linux-android: "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang"
-          CC_armv7-linux-androideabi: "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-clang"
-          AR_aarch64-linux-android: "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-          AR_armv7-linux-androideabi: "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-          RANLIB_aarch64-linux-android: "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib"
-          RANLIB_armv7-linux-androideabi: "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib"
           OPENSSL_NO_PKG_CONFIG: "1"
         run: cargo build --release --target ${{ matrix.target }}
 
