@@ -39,18 +39,18 @@ jobs:
           if [ "${{ matrix.target }}" = "aarch64-linux-android" ]; then
             CONF="android-arm64"
             PREFIX="/opt/openssl-android-aarch64"
-            CC_PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+            CC_PATH="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
           else
             CONF="android-arm"
             PREFIX="/opt/openssl-android-armv7"
-            CC_PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
+            CC_PATH="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
           fi
 
-          ./Configure $CONF no-shared no-tests no-async no-afalgeng \
-            --prefix=$PREFIX \
-            CC=$CC_PATH
+          ./Configure "$CONF" no-shared no-tests no-async no-afalgeng \
+            --prefix="$PREFIX" \
+            CC="$CC_PATH"
 
-          make -j$(nproc) install_sw
+          make -j"$(nproc)" install_sw
 
       - name: Configure Cargo for Android
         run: |
