@@ -1,4 +1,5 @@
-FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-gnu:mainRUN apt-get update && apt-get install -y \
+FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-gnu:main
+RUN apt-get update && apt-get install -y \
       curl make perl pkg-config clang lld \
       gcc-riscv64-linux-gnu libc6-dev-riscv64-cross libc6-riscv64-cross \
  && rm -rf /var/lib/apt/lists/*
