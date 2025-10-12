@@ -386,7 +386,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: .github/docker/Dockerfile.riscv64gc-unknown-linux-gnu
+          file: .github/docker/Dockerfile.riscv64-gnu
           push: false
           tags: local/riscv64-gnu-openssl:latest
 
@@ -431,7 +431,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: .github/docker/Dockerfile.riscv64gc-unknown-linux-musl
+          file: .github/docker/Dockerfile.riscv64-musl
           push: false
           tags: local/riscv64-musl-openssl:latest
 
