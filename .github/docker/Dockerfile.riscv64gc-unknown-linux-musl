@@ -6,7 +6,7 @@ WORKDIR /tmp
 RUN curl -LO https://www.openssl.org/source/openssl-3.0.15.tar.gz \
  && tar xf openssl-3.0.15.tar.gz \
  && cd openssl-3.0.15 \
- && CC="clang --target=riscv64-unknown-linux-musl" \
+ && CC="clang --target=riscv64-unknown-linux-musl --sysroot=/usr/riscv64-linux-musl" \
     ./Configure linux-generic64 no-shared no-tests \
       --prefix=/opt/openssl-riscv64 \
  && make -j$(nproc) install_sw \
