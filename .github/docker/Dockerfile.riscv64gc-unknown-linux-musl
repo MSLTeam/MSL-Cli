@@ -1,8 +1,10 @@
 FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:main
-RUN dpkg --add-architecture riscv64 \
- && sed -i 's|http://archive.ubuntu.com/ubuntu/|http://ports.ubuntu.com/ubuntu-ports/|g' /etc/apt/sources.list \
- && apt-get update \
- && apt-get install -y --no-install-recommends \
-      pkg-config \
-      libssl-dev:riscv64 \
+RUN apt-get update && apt-get install -y \
+      debootstrap qemu-user-static pkg-config \
  && rm -rf /var/lib/apt/lists/*
+RUN debootstrap --arch=riscv64 --foreign jammy /opt/riscv64-rootfs http://ports.ubuntu.com/ubuntu-ports \
+ && cp /usr/bin/qemu-riscv64-static /opt/riscv64-rootfs/usr/bin/ \
+ && chroot /opt/riscv64-rootfs /debootstrap/debootstrap --second-stage \
+ && chroot /opt/riscv64-rootfs apt-get update \
+ && chroot /opt/riscv64-rootfs apt-get install -y libssl-dev \
+ && rm -rf /opt/riscv64-rootfs/var/lib/apt/lists/*
