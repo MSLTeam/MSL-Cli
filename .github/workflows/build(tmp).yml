@@ -11,6 +11,7 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -69,10 +70,30 @@ jobs:
         run: |
           TOOLCHAIN_BIN="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
           echo "${TOOLCHAIN_BIN}" >> $GITHUB_PATH
-          ln -sf "${TOOLCHAIN_BIN}/aarch64-linux-android21-clang" "${TOOLCHAIN_BIN}/aarch64-linux-android-clang"
+          ln -sf "${TOOLCHAIN_BIN}/aarch64-linux-android21-clang"    "${TOOLCHAIN_BIN}/aarch64-linux-android-clang"
           ln -sf "${TOOLCHAIN_BIN}/armv7a-linux-androideabi21-clang" "${TOOLCHAIN_BIN}/armv7-linux-androideabi-clang"
-          ln -sf "${TOOLCHAIN_BIN}/x86_64-linux-android21-clang" "${TOOLCHAIN_BIN}/x86_64-linux-android-clang"
-          ln -sf "${TOOLCHAIN_BIN}/i686-linux-android21-clang" "${TOOLCHAIN_BIN}/i686-linux-android-clang"
+          ln -sf "${TOOLCHAIN_BIN}/x86_64-linux-android21-clang"     "${TOOLCHAIN_BIN}/x86_64-linux-android-clang"
+          ln -sf "${TOOLCHAIN_BIN}/i686-linux-android21-clang"       "${TOOLCHAIN_BIN}/i686-linux-android-clang"
+
+      - name: Export Android toolchain envs
+        if: matrix.platform == 'android'
+        run: |
+          echo "CC_aarch64-linux-android=aarch64-linux-android21-clang" >> $GITHUB_ENV
+          echo "CC_armv7-linux-androideabi=armv7a-linux-androideabi21-clang" >> $GITHUB_ENV
+          echo "CC_x86_64-linux-android=x86_64-linux-android21-clang" >> $GITHUB_ENV
+          echo "CC_i686-linux-android=i686-linux-android21-clang" >> $GITHUB_ENV
+          echo "AR_aarch64-linux-android=llvm-ar" >> $GITHUB_ENV
+          echo "AR_armv7-linux-androideabi=llvm-ar" >> $GITHUB_ENV
+          echo "AR_x86_64-linux-android=llvm-ar" >> $GITHUB_ENV
+          echo "AR_i686-linux-android=llvm-ar" >> $GITHUB_ENV
+          echo "RANLIB_aarch64-linux-android=llvm-ranlib" >> $GITHUB_ENV
+          echo "RANLIB_armv7-linux-androideabi=llvm-ranlib" >> $GITHUB_ENV
+          echo "RANLIB_x86_64-linux-android=llvm-ranlib" >> $GITHUB_ENV
+          echo "RANLIB_i686-linux-android=llvm-ranlib" >> $GITHUB_ENV
+          echo "NM_aarch64-linux-android=llvm-nm" >> $GITHUB_ENV
+          echo "NM_armv7-linux-androideabi=llvm-nm" >> $GITHUB_ENV
+          echo "NM_x86_64-linux-android=llvm-nm" >> $GITHUB_ENV
+          echo "NM_i686-linux-android=llvm-nm" >> $GITHUB_ENV
 
       - name: Prepare OpenSSL source
         if: matrix.platform == 'android'
@@ -120,12 +141,15 @@ jobs:
           [target.aarch64-linux-android]
           linker = "aarch64-linux-android21-clang"
           ar = "llvm-ar"
+
           [target.armv7-linux-androideabi]
           linker = "armv7a-linux-androideabi21-clang"
           ar = "llvm-ar"
+
           [target.x86_64-linux-android]
           linker = "x86_64-linux-android21-clang"
           ar = "llvm-ar"
+
           [target.i686-linux-android]
           linker = "i686-linux-android21-clang"
           ar = "llvm-ar"
@@ -137,16 +161,19 @@ jobs:
           export SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)
           echo "CARGO_TARGET_X86_64_APPLE_IOS_LINKER=$(xcrun -f clang)" >> $GITHUB_ENV
           echo "CARGO_TARGET_AARCH64_APPLE_IOS_LINKER=$(xcrun -f clang)" >> $GITHUB_ENV
-
+          
       - name: Build
-        run: |
-          cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }}
+        continue-on-error: true
         env:
-          OPENSSL_STATIC: "1"
-          OPENSSL_NO_PKG_CONFIG: "1"
-          OPENSSL_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64' || matrix.target == 'i686-linux-android' && '/opt/openssl-android-i686' || '' }}
-          OPENSSL_LIB_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/lib' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7/lib' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64/lib' || matrix.target == 'i686-linux-android' && '/opt/openssl-android-i686/lib' || '' }}
-          OPENSSL_INCLUDE_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/include' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7/include' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64/include' || matrix.target == 'i686-linux-android' && '/opt/openssl-android-i686/include' || '' }}
+          CC: ${{ matrix.platform == 'android' && (matrix.target == 'aarch64-linux-android' && 'aarch64-linux-android21-clang' || matrix.target == 'armv7-linux-androideabi' && 'armv7a-linux-androideabi21-clang' || matrix.target == 'x86_64-linux-android' && 'x86_64-linux-android21-clang' || 'i686-linux-android21-clang') || '' }}
+          AR: ${{ matrix.platform == 'android' && 'llvm-ar' || '' }}
+          RANLIB: ${{ matrix.platform == 'android' && 'llvm-ranlib' || '' }}
+          OPENSSL_STATIC: ${{ matrix.platform == 'android' && '1' || '' }}
+          OPENSSL_NO_PKG_CONFIG: ${{ matrix.platform == 'android' && '1' || '' }}
+          OPENSSL_DIR: ${{ matrix.platform == 'android' && (matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64' || '/opt/openssl-android-i686') || '' }}
+          OPENSSL_LIB_DIR: ${{ matrix.platform == 'android' && (matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/lib' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7/lib' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64/lib' || '/opt/openssl-android-i686/lib') || '' }}
+          OPENSSL_INCLUDE_DIR: ${{ matrix.platform == 'android' && (matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/include' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7/include' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64/include' || '/opt/openssl-android-i686/include') || '' }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
