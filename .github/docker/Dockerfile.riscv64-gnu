@@ -12,10 +12,9 @@ WORKDIR /tmp
 RUN curl -LO https://www.openssl.org/source/openssl-3.0.15.tar.gz \
  && tar xf openssl-3.0.15.tar.gz \
  && cd openssl-3.0.15 \
- && CC="clang --target=riscv64-unknown-linux-gnu --sysroot=/usr/riscv64-linux-gnu" \
-    ./Configure linux-generic64 no-shared no-tests \
+ && CC=riscv64-linux-gnu-gcc \
+    ./Configure linux-generic64 no-shared no-tests no-async no-afalgeng \
       --prefix=/opt/openssl-riscv64 \
- && make CC="clang --target=riscv64-unknown-linux-gnu --sysroot=/usr/riscv64-linux-gnu" \
-         LD=riscv64-linux-gnu-gcc \
-         V=1 install_sw \
+ && make V=1 install_sw \
  && rm -rf /tmp/*
+
