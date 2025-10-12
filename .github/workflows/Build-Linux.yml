@@ -213,7 +213,6 @@ jobs:
           tar -xzf openssl.tar.gz
           cd openssl-${OPENSSL_VERSION}
 
-          # 显式指定交叉编译器，避免 cross-compile-prefix 拼接
           export CC="$PWD/../zig-wrap/aarch64-linux-musl-cc"
           export AR=zig-ar
           export RANLIB=zig-ranlib
@@ -369,6 +368,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CROSS_CONTAINER: local/riscv64-gnu-openssl:latest
+      PKG_CONFIG_SYSROOT_DIR: /opt/riscv64-rootfs
+      PKG_CONFIG_PATH: /opt/riscv64-rootfs/usr/lib/riscv64-linux-gnu/pkgconfig
+      OPENSSL_DIR: /opt/riscv64-rootfs/usr
     steps:
       - uses: actions/checkout@v4
 
@@ -415,6 +417,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CROSS_CONTAINER: local/riscv64-musl-openssl:latest
+      PKG_CONFIG_SYSROOT_DIR: /opt/riscv64-rootfs
+      PKG_CONFIG_PATH: /opt/riscv64-rootfs/usr/lib/riscv64-linux-musl/pkgconfig
+      OPENSSL_DIR: /opt/riscv64-rootfs/usr
     steps:
       - uses: actions/checkout@v4
 
