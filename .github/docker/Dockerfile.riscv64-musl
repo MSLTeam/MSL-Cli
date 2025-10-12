@@ -2,6 +2,10 @@ FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:main
 RUN apt-get update && apt-get install -y \
       curl make perl pkg-config clang lld gcc-riscv64-linux-gnu libc6-dev-riscv64-cross libc6-riscv64-cross \
  && rm -rf /var/lib/apt/lists/*
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+ && . "$HOME/.cargo/env" \
+ && rustup target add riscv64gc-unknown-linux-musl
+ENV PATH="/root/.cargo/bin:${PATH}"
 WORKDIR /tmp
 RUN curl -LO https://www.openssl.org/source/openssl-3.0.15.tar.gz \
  && tar xf openssl-3.0.15.tar.gz \
