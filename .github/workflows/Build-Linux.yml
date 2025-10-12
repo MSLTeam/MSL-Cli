@@ -388,6 +388,7 @@ jobs:
           context: .
           file: .github/docker/Dockerfile.riscv64-gnu
           push: false
+          load: true
           tags: local/riscv64-gnu-openssl:latest
 
       - name: Install Rust toolchain
@@ -433,6 +434,7 @@ jobs:
           context: .
           file: .github/docker/Dockerfile.riscv64-musl
           push: false
+          load: true
           tags: local/riscv64-musl-openssl:latest
 
       - name: Install Rust toolchain
@@ -447,11 +449,6 @@ jobs:
             local/riscv64-musl-openssl:latest \
             cargo build --release --target riscv64gc-unknown-linux-musl
 
-      - name: Upload MUSL artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: msl-cli-riscv64gc-unknown-linux-musl
-          path: target/riscv64gc-unknown-linux-musl/release/msl-cli
       - name: Upload MUSL artifact
         uses: actions/upload-artifact@v4
         with:
