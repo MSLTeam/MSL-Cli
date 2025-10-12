@@ -1,10 +1,14 @@
 FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-gnu:main
 RUN apt-get update && apt-get install -y \
-      debootstrap qemu-user-static pkg-config \
+      curl make perl gcc g++ pkg-config \
  && rm -rf /var/lib/apt/lists/*
-RUN debootstrap --arch=riscv64 --foreign jammy /opt/riscv64-rootfs http://ports.ubuntu.com/ubuntu-ports \
- && cp /usr/bin/qemu-riscv64-static /opt/riscv64-rootfs/usr/bin/ \
- && chroot /opt/riscv64-rootfs /debootstrap/debootstrap --second-stage \
- && chroot /opt/riscv64-rootfs apt-get update \
- && chroot /opt/riscv64-rootfs apt-get install -y libssl-dev \
- && rm -rf /opt/riscv64-rootfs/var/lib/apt/lists/*
+WORKDIR /tmp
+RUN curl -LO https://www.openssl.org/source/openssl-3.0.15.tar.gz \
+ && tar xf openssl-3.0.15.tar.gz \
+ && cd openssl-3.0.15 \
+ && ./Configure linux-generic64 no-shared no-tests \
+      --prefix=/opt/openssl-riscv64 \
+      --cross-compile-prefix=riscv64-linux-gnu- \
+ && make -j$(nproc) install_sw \
+ && rm -rf /tmp/*
+
