@@ -31,31 +31,49 @@ jobs:
           add-to-path: true
 
       - name: Build OpenSSL for Android
+        shell: bash
         run: |
+          set -eux
+
+          # Common vars
+          export ANDROID_NDK="${ANDROID_NDK_HOME}"
+          export ANDROID_API=21
+
+          # Put LLVM toolchain on PATH for ar/ranlib/nm, etc.
+          export TOOLCHAIN_BIN="${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export PATH="${TOOLCHAIN_BIN}:${PATH}"
+
           curl -LO https://www.openssl.org/source/openssl-3.2.2.tar.gz
           tar xf openssl-3.2.2.tar.gz
           cd openssl-3.2.2
 
           if [ "${{ matrix.target }}" = "aarch64-linux-android" ]; then
-            CONF="android-arm64"
-            PREFIX="/opt/openssl-android-aarch64"
-            CC_PATH="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+            export CONF="android-arm64"
+            export PREFIX="/opt/openssl-android-aarch64"
+            export CC="${TOOLCHAIN_BIN}/aarch64-linux-android${ANDROID_API}-clang"
+            export CROSS_COMPILE="aarch64-linux-android-"
           else
-            CONF="android-arm"
-            PREFIX="/opt/openssl-android-armv7"
-            CC_PATH="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
+            export CONF="android-arm"
+            export PREFIX="/opt/openssl-android-armv7"
+            export CC="${TOOLCHAIN_BIN}/armv7a-linux-androideabi${ANDROID_API}-clang"
+            export CROSS_COMPILE="arm-linux-androideabi-"
           fi
 
-          ./Configure "$CONF" no-shared no-tests no-async no-afalgeng \
-            --prefix="$PREFIX" \
-            CC="$CC_PATH"
+          # Use LLVM binutils
+          export AR="${TOOLCHAIN_BIN}/llvm-ar"
+          export RANLIB="${TOOLCHAIN_BIN}/llvm-ranlib"
+          export NM="${TOOLCHAIN_BIN}/llvm-nm"
+
+          # Run Configure via perl, with env vars exported beforehand
+          perl ./Configure "${CONF}" no-shared no-tests no-async no-afalgeng \
+            --prefix="${PREFIX}"
 
           make -j"$(nproc)" install_sw
 
       - name: Configure Cargo for Android
         run: |
           mkdir -p .cargo
-          cat > .cargo/config.toml <<EOF
+          cat > .cargo/config.toml <<'EOF'
           [target.aarch64-linux-android]
           linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
 
