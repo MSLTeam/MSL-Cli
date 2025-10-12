@@ -7,4 +7,4 @@ RUN debootstrap --arch=riscv64 --foreign jammy /opt/riscv64-rootfs http://ports.
  && chroot /opt/riscv64-rootfs /debootstrap/debootstrap --second-stage \
  && chroot /opt/riscv64-rootfs apt-get update \
  && chroot /opt/riscv64-rootfs apt-get install -y libssl-dev \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /opt/riscv64-rootfs/var/lib/apt/lists/*
