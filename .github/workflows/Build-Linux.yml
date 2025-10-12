@@ -368,9 +368,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CROSS_CONTAINER: local/riscv64-gnu-openssl:latest
-      PKG_CONFIG_SYSROOT_DIR: /opt/riscv64-rootfs
-      PKG_CONFIG_PATH: /opt/riscv64-rootfs/usr/lib/riscv64-linux-gnu/pkgconfig
-      OPENSSL_DIR: /opt/riscv64-rootfs/usr
+      OPENSSL_DIR: /opt/openssl-riscv64
+      OPENSSL_INCLUDE_DIR: /opt/openssl-riscv64/include
+      OPENSSL_LIB_DIR: /opt/openssl-riscv64/lib
+      OPENSSL_STATIC: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -417,9 +418,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CROSS_CONTAINER: local/riscv64-musl-openssl:latest
-      PKG_CONFIG_SYSROOT_DIR: /opt/riscv64-rootfs
-      PKG_CONFIG_PATH: /opt/riscv64-rootfs/usr/lib/riscv64-linux-musl/pkgconfig
-      OPENSSL_DIR: /opt/riscv64-rootfs/usr
+      OPENSSL_DIR: /opt/openssl-riscv64
+      OPENSSL_INCLUDE_DIR: /opt/openssl-riscv64/include
+      OPENSSL_LIB_DIR: /opt/openssl-riscv64/lib
+      OPENSSL_STATIC: "1"
     steps:
       - uses: actions/checkout@v4
 
