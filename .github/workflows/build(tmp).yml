@@ -142,11 +142,11 @@ jobs:
         run: |
           cargo build --release --target ${{ matrix.target }}
         env:
-          OPENSSL_STATIC: ${{ matrix.platform == 'android' && '1' || '' }}
-          OPENSSL_NO_PKG_CONFIG: ${{ matrix.platform == 'android' && '1' || '' }}
-          OPENSSL_DIR: ${{ matrix.platform == 'android' && format('/opt/openssl-android-{0}', matrix.target == 'aarch64-linux-android' && 'aarch64' || matrix.target == 'armv7-linux-androideabi' && 'armv7' || matrix.target == 'x86_64-linux-android' && 'x86_64' || 'i686') || '' }}
-          OPENSSL_LIB_DIR: ${{ matrix.platform == 'android' && format('{0}/lib', env.OPENSSL_DIR) || '' }}
-          OPENSSL_INCLUDE_DIR: ${{ matrix.platform == 'android' && format('{0}/include', env.OPENSSL_DIR) || '' }}
+          OPENSSL_STATIC: "1"
+          OPENSSL_NO_PKG_CONFIG: "1"
+          OPENSSL_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64' || matrix.target == 'i686-linux-android' && '/opt/openssl-android-i686' || '' }}
+          OPENSSL_LIB_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/lib' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7/lib' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64/lib' || matrix.target == 'i686-linux-android' && '/opt/openssl-android-i686/lib' || '' }}
+          OPENSSL_INCLUDE_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/include' || matrix.target == 'armv7-linux-androideabi' && '/opt/openssl-android-armv7/include' || matrix.target == 'x86_64-linux-android' && '/opt/openssl-android-x86_64/include' || matrix.target == 'i686-linux-android' && '/opt/openssl-android-i686/include' || '' }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
