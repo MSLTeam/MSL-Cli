@@ -2,11 +2,7 @@ name: Build For Windows
 
 on:
   push:
-    tags: 
-      - 'v*'
-      - 'v*-beta*'
-      - 'v*-rc*'
-      - 'nightly*'
+    branches: [ main ]
   workflow_dispatch:
   pull_request:
 

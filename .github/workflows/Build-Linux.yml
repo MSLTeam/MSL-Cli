@@ -2,11 +2,7 @@ name: Build For Linux
 
 on:
   push:
-    tags:
-      - 'v*'
-      - 'v*-beta*'
-      - 'v*-rc*'
-      - 'nightly*'
+    branches: [ main ]
   pull_request:
   workflow_dispatch:
 
