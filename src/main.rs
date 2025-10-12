@@ -4,6 +4,7 @@ use chrono::Local;
 use clap::{Arg, ArgAction, Command, Parser, Subcommand, ArgMatches};
 use reqwest::blocking::Client;
 use serde::Deserialize;
+use serde_json;
 use std::{
     env,
     error::Error,
@@ -25,13 +26,14 @@ struct ApiResponse<T> {
     code:    u32,
     #[serde(rename = "msg")]
     message: String,
-    data:    T,
+    #[serde(default)]
+    data:    Option<T>,
 }
 
-#[derive(Deserialize)]
-struct LoginRespData {
+#[derive(Deserialize, Default)]
+struct AuthData {
     username: String,
-    token:    String,
+    token:    String
 }
 
 #[derive(Parser)]
@@ -65,8 +67,13 @@ fn login_user(
     email: &str,
     password: &str,
     twofa: Option<&str>,
-) -> Result<LoginRespData, Box<dyn Error>> {
-    // 构造 form 表单
+) -> Result<AuthData, Box<dyn Error>> {
+    if email.trim().is_empty() {
+        return Err("请输入邮箱".into());
+    }
+    if password.trim().is_empty() {
+        return Err("请输入密码".into())
+    }
     let mut form = vec![
         ("email",    email),
         ("password", password),
@@ -75,18 +82,20 @@ fn login_user(
         form.push(("twoFactorAuthKey", code));
     }
 
-    let resp: ApiResponse<LoginRespData> = Client::new()
+    let text = Client::new()
         .post(format!("{}/api/user/login", BASE_URL))
         .form(&form)
         .send()?
-        .error_for_status()?
-        .json()?;
+        .text()?;
 
-    if resp.code == 200 {
-        Ok(resp.data)
-    } else {
-        Err(format!("登录失败: {}", resp.message).into())
+    let resp: ApiResponse<AuthData> = serde_json::from_str(&text)?;
+
+    if resp.code != 200 {
+        return Err(resp.message.into());
     }
+
+    resp.data
+        .ok_or_else(|| "登录失败: 无返回数据".into())
 }
 
 // 构建 CLI 命令行界面
@@ -234,6 +243,12 @@ fn cmd_init(dry_run: bool) -> io::Result<()> {
         }
     }
 
+    let flag_path = cwd.join("MSL").join(".initialized");
+    if flag_path.exists() {
+        eprintln!("已经初始化，跳过 init");
+        exit(0);
+    }
+
     // 创建 MSL 根目录
     let msl_dir = cwd.join("MSL");
     if !msl_dir.exists() {
@@ -308,6 +323,11 @@ fn cmd_init(dry_run: bool) -> io::Result<()> {
         exit(CODE_DISAGREE);
     }
 
+    if let Err(e) = fs::write(&flag_path, "ok") {
+        eprintln!("写入初始化标志失败: {e}");
+        exit(1);
+    }
+
     Ok(())
 }
 
@@ -358,14 +378,40 @@ fn handle_login(sub_m: &ArgMatches) {
     } else {
         // --交互式登录分支-- //
         // 邮箱
-        println!("请输入邮箱：");
-        io::stdout().flush().unwrap();
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-        email = line.trim().to_string();
+        email = loop {
+            print!("请输入邮箱：");
+            io::stdout().flush().unwrap();
+            let mut line = String::new();
+            io::stdin().read_line(&mut line).unwrap();
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                eprintln!("邮箱不能为空，请重新输入。");
+                continue;
+            }
+            if !trimmed.contains('@') || !trimmed.contains('.') {
+                eprintln!("邮箱格式似乎不正确，请重新输入。");
+                continue;
+            }
+            break trimmed.to_string();
+        };
 
         // 密码
-        password = read_password().expect("读取密码失败");
+        password = loop {
+            print!("请输入密码 (提示: 为了安全考虑, 输入的密码会隐藏): ");
+            io::stdout().flush().unwrap();
+            let pwd_raw = read_password().expect("读取密码失败");
+            let trimmed = pwd_raw.trim();
+            if trimmed.is_empty() {
+                eprintln!("密码不能为空，请重新输入。");
+                continue;
+            }
+            // 可选：限制最小长度
+            if trimmed.len() < 6 {
+                eprintln!("密码长度至少 6 位，请重新输入。");
+                continue;
+            }
+            break trimmed.to_string();
+        };
 
         // 2FA
         twofa = loop {

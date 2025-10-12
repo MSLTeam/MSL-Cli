@@ -1,0 +1,75 @@
+name: Build For Apple
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'v*-beta*'
+      - 'v*-rc*'
+      - 'nightly*'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    name: macOS (x86_64 & arm64)
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install OpenSSL & pkg-config
+        run: |
+          brew install openssl@1.1 pkg-config
+
+      - name: Set OpenSSL env vars
+        run: |
+          echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
+          echo "OPENSSL_DIR=$(brew --prefix openssl@1.1)" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$(brew --prefix openssl@1.1)/lib/pkgconfig" >> $GITHUB_ENV
+
+      - name: Add Rust target
+        run: |
+          rustup target add ${{ matrix.target }}
+
+      - name: Build (macOS)
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/msl-cli
+
+  build-ios:
+    name: iOS (Simulator & Device)
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-ios, aarch64-apple-ios]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Add Rust target(s)
+        run: |
+          rustup target add x86_64-apple-ios aarch64-apple-ios
+
+      - name: Build for iOS
+        run: |
+          export SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)
+          export CARGO_TARGET_X86_64_APPLE_IOS_LINKER=$(xcrun -f clang)
+          export CARGO_TARGET_AARCH64_APPLE_IOS_LINKER=$(xcrun -f clang)
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msl-cli-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/msl-cli
