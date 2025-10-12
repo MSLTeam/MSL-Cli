@@ -1,7 +1,8 @@
 FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-gnu:main
 RUN apt-get update && apt-get install -y \
       debootstrap qemu-user-static pkg-config \
- && debootstrap --arch=riscv64 --foreign jammy /opt/riscv64-rootfs http://ports.ubuntu.com/ubuntu-ports \
+ && rm -rf /var/lib/apt/lists/*
+RUN debootstrap --arch=riscv64 --foreign jammy /opt/riscv64-rootfs http://ports.ubuntu.com/ubuntu-ports \
  && cp /usr/bin/qemu-riscv64-static /opt/riscv64-rootfs/usr/bin/ \
  && chroot /opt/riscv64-rootfs /debootstrap/debootstrap --second-stage \
  && chroot /opt/riscv64-rootfs apt-get update \
