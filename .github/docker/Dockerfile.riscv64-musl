@@ -7,12 +7,11 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
  && rustup target add riscv64gc-unknown-linux-musl
 ENV PATH="/root/.cargo/bin:${PATH}"
 WORKDIR /tmp
-RUN curl -LO https://www.openssl.org/source/openssl-3.0.15.tar.gz \
- && tar xf openssl-3.0.15.tar.gz \
- && cd openssl-3.0.15 \
- && CC="clang --target=riscv64-unknown-linux-musl --sysroot=/usr/riscv64-linux-musl -fuse-ld=lld" \
-    ./Configure linux-generic64 no-shared no-tests no-async no-afalgeng no-filenames \
+RUN curl -LO https://www.openssl.org/source/openssl-3.2.2.tar.gz \
+ && tar xf openssl-3.2.2.tar.gz \
+ && cd openssl-3.2.2 \
+ && CC="riscv64-unknown-linux-musl-gcc" \
+    ./Configure linux-generic64 no-shared no-tests no-async no-afalgeng \
       --prefix=/opt/openssl-riscv64 \
-      CFLAGS="-DOPENSSL_NO_FILENAMES -D__GLIBC__=0 -D_LARGEFILE64_SOURCE=0" \
- && make V=1 install_sw \
+ && make -j$(nproc) V=1 install_sw \
  && rm -rf /tmp/*
