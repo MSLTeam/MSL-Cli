@@ -1,5 +1,0 @@
-[target.riscv64gc-unknown-linux-gnu]
-image = "cross-custom-riscv64-gnu:latest"
-
-[target.riscv64gc-unknown-linux-musl]
-image = "cross-custom-riscv64-musl:latest"
