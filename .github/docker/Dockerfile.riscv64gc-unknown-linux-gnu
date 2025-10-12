@@ -1,4 +1,8 @@
 FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-gnu:latest
-RUN apt-get update \
- && apt-get install -y --no-install-recommends pkg-config libssl-dev \
+RUN dpkg --add-architecture riscv64 \
+ && sed -i 's|http://archive.ubuntu.com/ubuntu/|http://ports.ubuntu.com/ubuntu-ports/|g' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      pkg-config \
+      libssl-dev:riscv64 \
  && rm -rf /var/lib/apt/lists/*
