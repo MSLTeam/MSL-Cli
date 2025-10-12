@@ -30,6 +30,26 @@ jobs:
           ndk-version: r25c
           add-to-path: true
 
+      - name: Build OpenSSL for Android
+        run: |
+          curl -LO https://www.openssl.org/source/openssl-3.2.2.tar.gz
+          tar xf openssl-3.2.2.tar.gz
+          cd openssl-3.2.2
+
+          if [ "${{ matrix.target }}" = "aarch64-linux-android" ]; then
+            CC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+            CONF="android-arm64"
+            PREFIX="/opt/openssl-android-aarch64"
+          else
+            CC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
+            CONF="android-arm"
+            PREFIX="/opt/openssl-android-armv7"
+          fi
+
+          CC=$CC ./Configure $CONF no-shared no-tests no-async no-afalgeng \
+            --prefix=$PREFIX
+          make -j$(nproc) install_sw
+
       - name: Configure Cargo for Android
         run: |
           mkdir -p .cargo
@@ -41,7 +61,12 @@ jobs:
           linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
           EOF
 
-      - name: Build
+      - name: Build Rust project
+        env:
+          OPENSSL_STATIC: "1"
+          OPENSSL_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64' || '/opt/openssl-android-armv7' }}
+          OPENSSL_LIB_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/lib' || '/opt/openssl-android-armv7/lib' }}
+          OPENSSL_INCLUDE_DIR: ${{ matrix.target == 'aarch64-linux-android' && '/opt/openssl-android-aarch64/include' || '/opt/openssl-android-armv7/include' }}
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload artifact
