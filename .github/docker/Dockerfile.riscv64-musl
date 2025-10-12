@@ -1,0 +1,14 @@
+ARG TARGET=musl
+FROM ghcr.io/cross-rs/riscv64gc-unknown-linux-${TARGET}:main
+RUN apt-get update && apt-get install -y \
+      curl make perl pkg-config clang \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /tmp
+RUN curl -LO https://www.openssl.org/source/openssl-3.0.15.tar.gz \
+ && tar xf openssl-3.0.15.tar.gz \
+ && cd openssl-3.0.15 \
+ && CC="clang --target=riscv64-unknown-linux-${TARGET} --sysroot=/usr/riscv64-linux-${TARGET}" \
+    ./Configure linux-generic64 no-shared no-tests \
+      --prefix=/opt/openssl-riscv64 \
+ && make -j$(nproc) V=1 install_sw \
+ && rm -rf /tmp/*
