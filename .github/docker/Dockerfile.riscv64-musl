@@ -11,7 +11,7 @@ RUN curl -LO https://www.openssl.org/source/openssl-3.2.2.tar.gz \
  && tar xf openssl-3.2.2.tar.gz \
  && cd openssl-3.2.2 \
  && CC="riscv64-unknown-linux-musl-gcc" \
-    ./Configure linux-generic64 no-shared no-tests no-async no-afalgeng \
+    ./Configure linux-generic64 no-shared no-tests no-async no-afalgeng no-legacy no-stdio \
       --prefix=/opt/openssl-riscv64 \
  && make -j$(nproc) V=1 install_sw \
  && rm -rf /tmp/*
