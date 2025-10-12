@@ -37,17 +37,19 @@ jobs:
           cd openssl-3.2.2
 
           if [ "${{ matrix.target }}" = "aarch64-linux-android" ]; then
-            CC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
             CONF="android-arm64"
             PREFIX="/opt/openssl-android-aarch64"
+            CC_PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
           else
-            CC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
             CONF="android-arm"
             PREFIX="/opt/openssl-android-armv7"
+            CC_PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
           fi
 
-          CC=$CC ./Configure $CONF no-shared no-tests no-async no-afalgeng \
-            --prefix=$PREFIX
+          ./Configure $CONF no-shared no-tests no-async no-afalgeng \
+            --prefix=$PREFIX \
+            CC=$CC_PATH
+
           make -j$(nproc) install_sw
 
       - name: Configure Cargo for Android
