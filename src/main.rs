@@ -46,6 +46,19 @@ async fn main() -> Result<()> {
 
     // 主事件循环
     loop {
+        while let Ok(io_event) = rx.try_recv() {
+            match io_event {
+                IoEvent::HomeDataLoaded(data) => {
+                    app_state.home_data = Some(crate::core::api::Announcement {
+                       data: "".to_string(),
+                    });
+                }
+                IoEvent::LoadError(err) => {
+                    // 处理逻辑错误，可以在 UI 状态记录错误信息
+                }
+            }
+        }
+
         terminal.draw(|f| ui::render(f, &app_state))?;
 
         if event::poll(Duration::from_millis(16))? {
@@ -53,7 +66,8 @@ async fn main() -> Result<()> {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         KeyCode::Char('q') => app_state.should_quit = true,
-                        // 预留后续 Tab切换逻辑
+                        KeyCode::Down => app_state.selected_tab = (app_state.selected_tab + 1 ) % 6,
+                        KeyCode::Up => app_state.selected_tab = if app_state.selected_tab == 0 { 5 } else { app_state.selected_tab - 1 },
                         _ => {}
                     }
                 }
