@@ -8,21 +8,21 @@ pub struct MslConfig {
     pub appearance: AppearanceConfig,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DockerConfig {
     pub enabled: bool,
     pub use_podman: bool,
     pub image: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FrpConfig {
     pub enabled: bool,
     pub client_path: String,
     pub config_path: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GeneralConfig {
     pub log_level: String,
     pub auto_restart: bool,
@@ -30,12 +30,12 @@ pub struct GeneralConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 pub enum ImageMode {
-    Protocol, 
+    Protocol,
     Ascii,
     Unknown,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppearanceConfig {
     pub image_render_mode: ImageMode,
 }

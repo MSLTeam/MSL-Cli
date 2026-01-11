@@ -8,11 +8,11 @@ use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use std::time::Duration;
 use tokio::sync::mpsc;
-use crate::core::api::{ApiClient, AnnouncementData};
+use crate::core::api::{ApiClient, HomeDisplayData};
 use console::style;
 
 pub enum IoEvent {
-    HomeDataLoaded(AnnouncementData),
+    DataLoaded(HomeDisplayData),
     LoadError(String),
 }
 
@@ -33,9 +33,12 @@ async fn main() -> Result<()> {
     let tx_clone = tx.clone();
     tokio::spawn(async move {
         let api = ApiClient::new();
-        match api.fetch_home_announcement().await {
+        match api.fetch_home_display_data().await {
             Ok(data) => {
-                let _ = tx_clone.send(IoEvent::HomeDataLoaded(data)).await;
+                let _ = tx_clone.send(IoEvent::DataLoaded(data)).await;
+            }
+            Err(e) => {
+                let _ =tx_clone.send(IoEvent::LoadError(e.to_string())).await;
             }
         }
     });
@@ -48,13 +51,9 @@ async fn main() -> Result<()> {
     loop {
         while let Ok(io_event) = rx.try_recv() {
             match io_event {
-                IoEvent::HomeDataLoaded(data) => {
-                    app_state.home_data = Some(crate::core::api::Announcement {
-                       data: "".to_string(),
-                    });
-                }
-                IoEvent::LoadError(err) => {
-                    // 处理逻辑错误，可以在 UI 状态记录错误信息
+                IoEvent::DataLoaded(data) => app_state.home_data = Some(data),
+                IoEvent::LoadError(e) => {
+                    eprintln!("背景加载错误：{}", e);
                 }
             }
         }

@@ -12,11 +12,13 @@ pub fn render(f: &mut Frame, state: &AppState) {
 
     components::render_sidebar(f, layout[0], state);
 
-    let (title, content) = if let Some(data) = &state.home_data {
-        (data.title.as_str(), data.content.as_str())
-    } else {
-        ("正在加载...", "请稍后，正在获取 MSL 公告...")
-    };
-
-    components::render_banner(f, layout[1], content);
+    if let Some(data) = &state.home_data {
+        let tips_text = if !data.tips.is_empty() {
+            format!(" Tips: {}", data.tips.join(" | "))
+        } else {
+            String::new()
+        };
+        
+        components::render_banner(f, layout[1], "公告", &tips_text, &data.notice_html);
+    }
 }

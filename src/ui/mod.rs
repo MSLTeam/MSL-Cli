@@ -2,12 +2,12 @@ pub mod home;
 pub mod components;
 
 use ratatui::prelude::*;
-use crate::core::api::{Announcement};
+use crate::core::api::HomeDisplayData;
 
 pub struct AppState {
     pub should_quit: bool,
     pub selected_tab: usize,
-    pub home_data: Option<Announcement>
+    pub home_data: Option<HomeDisplayData>
 }
 
 impl AppState {
